@@ -35,6 +35,16 @@ builder.Services.AddScoped<IScheduleHangfireSyncService, ScheduleHangfireSyncSer
 
 builder.Services.AddOpenApi();
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:5011", "https://localhost:7171")
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 // Run migrations at startup
@@ -53,6 +63,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+app.UseCors();
 app.UseHttpsRedirection();
 app.MapHangfireDashboard();
 

@@ -1,0 +1,28 @@
+@inherits LayoutComponentBase
+
+<div class="layout">
+    <aside class="sidebar @(_sidebarCollapsed ? "collapsed" : null)">
+        <button type="button" class="sidebar-toggle" @onclick="ToggleSidebar" aria-label="@(_sidebarCollapsed ? "Show menu" : "Hide menu")">
+            <i class="bi bi-list"></i>
+        </button>
+        <nav class="sidebar-nav">
+            <NavLink href="/" Match="NavLinkMatch.All" class="nav-link">
+                <i class="bi bi-house"></i>
+                <span class="nav-link-text">Home</span>
+            </NavLink>
+            <NavLink href="/jobs" class="nav-link">
+                <i class="bi bi-briefcase"></i>
+                <span class="nav-link-text">Jobs</span>
+            </NavLink>
+        </nav>
+    </aside>
+    <main class="main-content">
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool _sidebarCollapsed;
+
+    private void ToggleSidebar() => _sidebarCollapsed = !_sidebarCollapsed;
+}

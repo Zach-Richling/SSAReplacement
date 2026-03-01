@@ -79,7 +79,7 @@ public sealed class JobRunnerService(
             process.StartInfo.CreateNoWindow = true;
 
             foreach (var v in job.Variables)
-                process.StartInfo.Environment[v.Key] = v.Value;
+                process.StartInfo.Environment[$"JobVariables__{v.Key}"] = v.Value;
 
             process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.Add(e.Data); };
             process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.Add(e.Data); };

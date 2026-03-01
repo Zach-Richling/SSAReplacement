@@ -1,0 +1,67 @@
+@page "/jobs"
+@inject HttpClient Http
+
+<PageTitle>Jobs</PageTitle>
+
+<h1>Jobs</h1>
+
+@if (_loading)
+{
+    <p>Loading…</p>
+}
+else if (_error is not null)
+{
+    <p class="error">@_error</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Executable</th>
+                <th>Enabled</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var job in _jobs)
+            {
+                <tr>
+                    <td>@job.Name</td>
+                    <td>@(job.ExecutableName ?? "—")</td>
+                    <td>@(job.IsEnabled ? "Yes" : "No")</td>
+                    <td>@job.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if (_jobs.Count == 0)
+    {
+        <p>No jobs found.</p>
+    }
+}
+
+@code {
+    private List<Models.JobSummary> _jobs = new();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var list = await Http.GetFromJsonAsync<List<JobSummary>>("jobs");
+            _jobs = list ?? new();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load jobs: {ex.Message}";
+            _jobs = new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
