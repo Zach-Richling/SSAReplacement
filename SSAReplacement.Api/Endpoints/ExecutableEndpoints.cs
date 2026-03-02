@@ -13,7 +13,11 @@ public static class ExecutableEndpoints
 
         group.MapGet("/", async (AppDbContext db) =>
         {
-            var list = await db.Executables.AsNoTracking().OrderBy(e => e.Id).ToListAsync();
+            var list = await db.Executables
+                .Include(e => e.Versions)
+                .AsNoTracking()
+                .OrderBy(e => e.Id)
+                .ToListAsync();
 
             return Results.Ok(list.Select(ExecutableDto.From));
         });

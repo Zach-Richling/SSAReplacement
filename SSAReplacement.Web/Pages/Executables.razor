@@ -1,0 +1,158 @@
+@page "/executables"
+@using SSAReplacement.Web.Shared.Form
+@using SSAReplacement.Web.Client
+@inject SsaApiClient Api
+
+<PageTitle>Executables</PageTitle>
+
+@if (_loading && _executables.Count == 0)
+{
+    <div class="status loading">Loading…</div>
+}
+else if (_error is not null)
+{
+    <div class="status error">@_error</div>
+}
+
+<header class="page-header">
+    <h1>Executables</h1>
+    <div class="search-wrap">
+        <SearchBar Value="@_searchQuery" ValueChanged="OnSearchChanged" Placeholder="Filter by name…" AriaLabel="Filter executables by name" />
+    </div>
+    <div class="page-header-actions">
+        <button type="button" @onclick="OpenAddExecutableModal">Add Executable</button>
+    </div>
+</header>
+
+<Modal Title="Add Executable" Visible="_addExecutable.Visible" OnClose="CloseAddExecutableModal">
+    <div class="form">
+        <FormField Label="Name" Required ErrorMessage="@_addExecutable.NameError" InputId="new-executable-name">
+            <input id="new-executable-name" type="text" value="@_addExecutable.Name" @oninput="OnAddExecutableNameChanged" placeholder="Executable name" aria-describedby="new-executable-name-error" aria-invalid="@(!string.IsNullOrEmpty(_addExecutable.NameError))" />
+        </FormField>
+        <div class="actions">
+            <button type="button" @onclick="SubmitAddExecutable" disabled="@_addExecutable.IsSubmitting">Add</button>
+            <button type="button" class="btn-secondary" @onclick="CloseAddExecutableModal">Cancel</button>
+        </div>
+    </div>
+</Modal>
+
+@if (!_filteredExecutables.Any())
+{
+    <p class="empty">@(_executables.Count == 0 ? "No executables." : "No executables match.")</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Active version</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var exe in _filteredExecutables)
+            {
+                <tr>
+                    <td>@(exe.Name ?? "—")</td>
+                    <td>@(exe.ActiveVersion ?? "—")</td>
+                    <td>@exe.CreatedAt.ToTimeAgo()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Executable> _executables = [];
+    private string _searchQuery = "";
+    private bool _loading = true;
+    private string? _error;
+
+    private AddExecutableFormState _addExecutable = new();
+
+    private IEnumerable<Executable> _filteredExecutables =>
+        string.IsNullOrWhiteSpace(_searchQuery)
+            ? _executables
+            : _executables.Where(e => (e.Name ?? "").Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _executables = await Api.GetExecutablesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = "Failed to load: " + ex.Message;
+            _executables = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnSearchChanged(string? value)
+    {
+        _searchQuery = value ?? "";
+    }
+
+    private void OpenAddExecutableModal()
+    {
+        _addExecutable = new AddExecutableFormState { Visible = true };
+    }
+
+    private void CloseAddExecutableModal()
+    {
+        _addExecutable = new AddExecutableFormState();
+    }
+
+    private void OnAddExecutableNameChanged(ChangeEventArgs e)
+    {
+        _addExecutable = _addExecutable with { Name = e.Value?.ToString() ?? "", NameError = null };
+    }
+
+    private async Task SubmitAddExecutable()
+    {
+        _addExecutable = _addExecutable with { NameError = null };
+
+        if (string.IsNullOrWhiteSpace(_addExecutable.Name))
+        {
+            _addExecutable = _addExecutable with { NameError = "Enter a name." };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _addExecutable = _addExecutable with { IsSubmitting = true };
+        try
+        {
+            await Api.CreateExecutableAsync(new CreateExecutableRequest(_addExecutable.Name.Trim()));
+            CloseAddExecutableModal();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            _addExecutable = _addExecutable with { NameError = ex.Message };
+        }
+        finally
+        {
+            _addExecutable = _addExecutable with { IsSubmitting = false };
+        }
+    }
+
+    private record AddExecutableFormState
+    {
+        public bool Visible { get; init; }
+        public string Name { get; init; } = "";
+        public string? NameError { get; init; }
+        public bool IsSubmitting { get; init; }
+    }
+}
