@@ -1,0 +1,35 @@
+@namespace SSAReplacement.Web.Shared.Form
+
+<div class="row">
+    <label for="@InputId">
+        @Label
+        @if (Required)
+        {
+            <span class="required"> *</span>
+        }
+    </label>
+    @ChildContent
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div id="@ErrorId" class="field-error" role="alert">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public bool Required { get; set; }
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string? InputId { get; set; }
+
+    private string ErrorId => InputId is not null ? InputId + "-error" : "field-error-" + GetHashCode();
+}

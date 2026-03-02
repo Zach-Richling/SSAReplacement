@@ -1,6 +1,6 @@
 namespace SSAReplacement.Web.Models;
 
-public record JobSummary(
+internal record JobSummary(
     int Id,
     int ExecutableId,
     string Name,

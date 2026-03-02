@@ -1,0 +1,13 @@
+@namespace SSAReplacement.Web.Shared.Pill
+
+<span class="pill pill-@ColorClass">@Text</span>
+
+@code {
+    [Parameter]
+    public PillColor Color { get; set; }
+
+    [Parameter]
+    public string Text { get; set; } = "";
+
+    private string ColorClass => Color.ToString().ToLowerInvariant();
+}

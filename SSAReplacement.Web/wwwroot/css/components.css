@@ -1,0 +1,301 @@
+/* Buttons */
+button.btn-secondary {
+    background: var(--border);
+    color: var(--text);
+}
+
+button.btn-secondary:hover {
+    opacity: 0.9;
+}
+
+/* Status messages */
+.status {
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+.status.loading {
+    color: var(--accent);
+}
+
+.status.error {
+    color: var(--error);
+}
+
+/* Search bar (single block: input + icon) */
+.search-input-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    max-width: 20rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.search-input-group input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    border-right: none;
+    border-radius: 0;
+    background: var(--surface);
+    padding: 0.35rem 0.5rem;
+    color: var(--text);
+    font-family: inherit;
+}
+
+.search-input-group input:focus {
+    outline: none;
+}
+
+.search-input-group input::placeholder {
+    color: var(--muted);
+}
+
+.search-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.25rem;
+    padding: 0 0.35rem;
+    background: var(--bg);
+    border: none;
+    border-left: none;
+    color: var(--muted);
+}
+
+.search-icon svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Pills */
+.pill {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.pill-success {
+    background: rgba(63, 185, 80, 0.2);
+    color: var(--success);
+}
+
+.pill-muted {
+    background: rgba(139, 148, 158, 0.2);
+    color: var(--muted);
+}
+
+.pill-error {
+    background: rgba(248, 81, 73, 0.2);
+    color: var(--error);
+}
+
+.pill-accent {
+    background: rgba(88, 166, 255, 0.2);
+    color: var(--accent);
+}
+
+/* Page header */
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    flex-shrink: 0;
+}
+
+.page-header .search-wrap {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.page-header .search-wrap .search-input-group {
+    width: 100%;
+}
+
+.page-header .page-header-actions {
+    flex-shrink: 0;
+}
+
+/* Table */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.table th,
+.table td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.table th {
+    color: var(--muted);
+    font-weight: 500;
+}
+
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+th.sortable:hover {
+    color: var(--text);
+}
+
+.sort-indicator {
+    margin-left: 0.25rem;
+    font-size: 0.7em;
+    opacity: 0.8;
+}
+
+.table tbody tr:hover td {
+    background: var(--surface);
+}
+
+.empty {
+    color: var(--muted);
+    font-style: italic;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-panel {
+    position: relative;
+    width: 100%;
+    max-width: 24rem;
+    padding: 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.modal-panel h2 {
+    margin: 0 0 1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+/* Form */
+.form label {
+    color: var(--muted);
+    font-size: 0.875rem;
+    margin-right: 0.5rem;
+}
+
+.form .row > input,
+.form .row > select {
+    padding: 0.35rem 0.5rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: inherit;
+}
+
+.form .row {
+    margin-bottom: 0.75rem;
+}
+
+.form .actions {
+    margin-top: 1rem;
+}
+
+.form .actions button:first-child {
+    margin-right: 0.5rem;
+}
+
+/* Search bar inside form */
+.form .search-input-group {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.form .search-input-group input {
+    background: var(--bg);
+}
+
+.form .search-icon {
+    background: var(--bg);
+    border-radius: 0 4px 4px 0;
+}
+
+.field-error {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--error);
+}
+
+.required {
+    color: var(--error);
+}
+
+.typeahead-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 20rem;
+}
+
+.dropdown-list {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 2px;
+    max-height: 12rem;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.dropdown-list.hidden {
+    display: none;
+}
+
+.dropdown-option {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.dropdown-option:hover {
+    background: var(--border);
+}

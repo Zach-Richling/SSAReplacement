@@ -1,67 +1,272 @@
 @page "/jobs"
+@using SSAReplacement.Web.Shared.Form
+@using SSAReplacement.Web.Shared.Pill
+@using System.Net
 @inject HttpClient Http
 
 <PageTitle>Jobs</PageTitle>
 
-<h1>Jobs</h1>
-
-@if (_loading)
+@if (_loading && _jobs.Count == 0)
 {
-    <p>Loading…</p>
+    <div class="status loading">Loading…</div>
 }
 else if (_error is not null)
 {
-    <p class="error">@_error</p>
+    <div class="status error">@_error</div>
+}
+
+<header class="page-header">
+    <h1>Jobs</h1>
+    <div class="search-wrap">
+        <SearchBar Value="@_searchQuery" ValueChanged="OnSearchChanged" Placeholder="Filter by name…" AriaLabel="Filter jobs by name" />
+    </div>
+    <div class="page-header-actions">
+        <button type="button" @onclick="OpenAddJobModal">Add Job</button>
+    </div>
+</header>
+
+<Modal Title="Add Job" Visible="_addJob.Visible" OnClose="CloseAddJobModal">
+    <div class="form">
+        <FormField Label="Name" Required ErrorMessage="@_addJob.NameError" InputId="new-job-name">
+            <input id="new-job-name" type="text" value="@_addJob.Name" @oninput="OnAddJobNameChanged" placeholder="Job name" aria-describedby="new-job-name-error" aria-invalid="@(!string.IsNullOrEmpty(_addJob.NameError))" />
+        </FormField>
+        <FormField Label="Executable" Required ErrorMessage="@_addJob.ExecutableError" InputId="new-job-executable">
+            <SearchableSelect 
+                TItem="ExecutableItem"
+                Items="_executables"
+                Value="@_addJob.SelectedExecutableId"
+                ValueChanged="OnExecutableSelected"
+                ValueSelector="e => e.Id"
+                TextSelector="e => e.Name"
+                Placeholder="Search executables…"
+                AriaLabel="Select executable" />
+        </FormField>
+        <div class="actions">
+            <button type="button" @onclick="SubmitAddJob" disabled="@_addJob.IsSubmitting">Add</button>
+            <button type="button" class="btn-secondary" @onclick="CloseAddJobModal">Cancel</button>
+        </div>
+    </div>
+</Modal>
+
+@if (!_filteredJobs.Any())
+{
+    <p class="empty">@(_jobs.Count == 0 ? "No jobs." : "No jobs match.")</p>
 }
 else
 {
-    <table>
+    <table class="table">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Executable</th>
-                <th>Enabled</th>
+                <th class="sortable" @onclick='() => SetSort("name")'>Name <span class="sort-indicator">@SortArrow("name")</span></th>
+                <th class="sortable" @onclick='() => SetSort("executableName")'>Executable <span class="sort-indicator">@SortArrow("executableName")</span></th>
+                <th class="sortable" @onclick='() => SetSort("isEnabled")'>Enabled <span class="sort-indicator">@SortArrow("isEnabled")</span></th>
                 <th>Created</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var job in _jobs)
+            @foreach (var job in _sortedJobs)
             {
                 <tr>
                     <td>@job.Name</td>
                     <td>@(job.ExecutableName ?? "—")</td>
-                    <td>@(job.IsEnabled ? "Yes" : "No")</td>
-                    <td>@job.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td><Pill Color="@(job.IsEnabled ? PillColor.Success : PillColor.Muted)" Text="@(job.IsEnabled ? "Enabled" : "Disabled")" /></td>
+                    <td>@TimeAgo(job.CreatedAt)</td>
                 </tr>
             }
         </tbody>
     </table>
-    @if (_jobs.Count == 0)
-    {
-        <p>No jobs found.</p>
-    }
 }
 
 @code {
-    private List<Models.JobSummary> _jobs = new();
+    private List<JobSummary> _jobs = [];
+    private List<ExecutableItem> _executables = [];
+
+    private string _searchQuery = "";
+    private string _sortColumn = "name";
+
+    private bool _sortAsc = true;
+
     private bool _loading = true;
     private string? _error;
 
+    private AddJobRequest _addJob = new();
+
+    private IEnumerable<JobSummary> _filteredJobs =>
+        string.IsNullOrWhiteSpace(_searchQuery)
+            ? _jobs
+            : _jobs.Where(j => j.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<JobSummary> _sortedJobs =>
+        _sortColumn switch
+        {
+            "name" => _sortAsc ? _filteredJobs.OrderBy(j => j.Name) : _filteredJobs.OrderByDescending(j => j.Name),
+            "executableName" => _sortAsc ? _filteredJobs.OrderBy(j => j.ExecutableName) : _filteredJobs.OrderByDescending(j => j.ExecutableName),
+            "isEnabled" => _sortAsc ? _filteredJobs.OrderBy(j => j.IsEnabled) : _filteredJobs.OrderByDescending(j => j.IsEnabled),
+            _ => _filteredJobs
+        };
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _error = null;
         try
         {
-            var list = await Http.GetFromJsonAsync<List<JobSummary>>("jobs");
-            _jobs = list ?? new();
+            var jobsTask = Http.GetFromJsonAsync<List<JobSummary>>("jobs");
+            var executablesTask = Http.GetFromJsonAsync<List<ExecutableDto>>("executables");
+
+            await Task.WhenAll(jobsTask, executablesTask);
+
+            _jobs = await jobsTask ?? [];
+            var execList = await executablesTask ?? [];
+            _executables = execList.Select(e => new ExecutableItem(e.Id, e.Name)).ToList();
         }
         catch (Exception ex)
         {
-            _error = $"Failed to load jobs: {ex.Message}";
-            _jobs = new();
+            _error = "Failed to load: " + ex.Message;
+            _jobs = new List<JobSummary>();
+            _executables = new List<ExecutableItem>();
         }
         finally
         {
             _loading = false;
         }
+    }
+
+    private void OnSearchChanged(string? value)
+    {
+        _searchQuery = value ?? "";
+    }
+
+    private void SetSort(string column)
+    {
+        if (_sortColumn == column)
+            _sortAsc = !_sortAsc;
+        else
+        {
+            _sortColumn = column;
+            _sortAsc = true;
+        }
+    }
+
+    private string SortArrow(string column)
+    {
+        if (_sortColumn != column) 
+            return "";
+
+        return _sortAsc ? "\u2191" : "\u2193";
+    }
+
+    private static string TimeAgo(DateTime dateTime)
+    {
+        var diff = DateTime.UtcNow - dateTime;
+
+        var sec = (int)diff.TotalSeconds;
+        if (sec < 10) 
+            return "just now";
+
+        if (sec < 60) 
+            return sec + " seconds ago";
+
+        var min = (int)(sec / 60);
+        if (min < 60)
+            return min + (min == 1 ? " minute ago" : " minutes ago");
+
+        var hr = (int)(min / 60);
+        if (hr < 24)
+            return hr + (hr == 1 ? " hour ago" : " hours ago");
+
+        var day = (int)(hr / 24);
+        return day + (day == 1 ? " day ago" : " days ago");
+    }
+
+    private void OpenAddJobModal()
+    {
+        _addJob = new AddJobRequest { Visible = true };
+    }
+
+    private void CloseAddJobModal()
+    {
+        _addJob = new AddJobRequest();
+    }
+
+    private void OnAddJobNameChanged(ChangeEventArgs e)
+    {
+        _addJob = _addJob with { Name = e.Value?.ToString() ?? "", NameError = null };
+    }
+
+    private void OnExecutableSelected(int? id)
+    {
+        _addJob = _addJob with { SelectedExecutableId = id, ExecutableError = null };
+    }
+
+    private async Task SubmitAddJob()
+    {
+        _addJob = _addJob with { NameError = null, ExecutableError = null };
+
+        var hasError = false;
+        if (string.IsNullOrEmpty(_addJob.Name))
+        {
+            _addJob = _addJob with { NameError = "Enter a job name." };
+            hasError = true;
+        }
+
+        if (_addJob.SelectedExecutableId is null || _addJob.SelectedExecutableId.Value < 1)
+        {
+            _addJob = _addJob with { ExecutableError = "Select an executable." };
+            hasError = true;
+        }
+
+        if (hasError)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _addJob = _addJob with { IsSubmitting = true };
+
+        try
+        {
+            var body = new 
+            { 
+                executableId = _addJob.SelectedExecutableId,
+                _addJob.Name,
+                isEnabled = true 
+            };
+            var res = await Http.PostAsJsonAsync("jobs", body);
+
+            if (!res.IsSuccessStatusCode)
+            {
+                var msg = res.StatusCode == HttpStatusCode.NotFound ? "Executable not found." : await res.Content.ReadAsStringAsync();
+                _addJob = _addJob with { ExecutableError = msg };
+                return;
+            }
+
+            CloseAddJobModal();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            _addJob = _addJob with { ExecutableError = ex.Message };
+        }
+        finally
+        {
+            _addJob = _addJob with { IsSubmitting = false };
+        }
+    }
+
+    private record AddJobRequest
+    {
+        public string Name { get; init; } = "";
+        public int? SelectedExecutableId { get; init; }
+
+        public bool Visible { get; init; }
+        public string? NameError { get; init; }
+        public string? ExecutableError { get; init; }
+        public bool IsSubmitting { get; init; }
     }
 }
