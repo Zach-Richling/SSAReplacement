@@ -3,6 +3,7 @@
 @using SSAReplacement.Web.Shared.Pill
 @using SSAReplacement.Web.Client
 @inject SsaApiClient Api
+@inject NavigationManager Nav
 
 <PageTitle>Jobs</PageTitle>
 
@@ -66,7 +67,7 @@ else
         <tbody>
             @foreach (var job in _sortedJobs)
             {
-                <tr>
+                <tr class="table-row-clickable" role="button" tabindex="0" @onclick="() => NavigateToJob(job.Id)" @onkeydown="e => HandleRowKey(e, job.Id)">
                     <td>@job.Name</td>
                     <td>@(job.ExecutableName ?? "—")</td>
                     <td><Pill Color="@(job.IsEnabled ? PillColor.Success : PillColor.Muted)" Text="@(job.IsEnabled ? "Enabled" : "Disabled")" /></td>
@@ -140,6 +141,17 @@ else
     private void OnSearchChanged(string? value)
     {
         _searchQuery = value ?? "";
+    }
+
+    private void NavigateToJob(int jobId)
+    {
+        Nav.NavigateTo($"/jobs/{jobId}");
+    }
+
+    private void HandleRowKey(KeyboardEventArgs e, int jobId)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+            NavigateToJob(jobId);
     }
 
     private void SetSort(string column)

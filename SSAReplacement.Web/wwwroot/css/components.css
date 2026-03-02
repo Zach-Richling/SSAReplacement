@@ -133,6 +133,33 @@ button.btn-secondary:hover {
     flex-shrink: 0;
 }
 
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    font-size: 1rem;
+}
+
+.breadcrumb a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-sep {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.breadcrumb-current {
+    color: var(--text);
+    font-weight: 600;
+}
+
 /* Table */
 .table {
     width: 100%;
@@ -171,6 +198,10 @@ th.sortable:hover {
     background: var(--surface);
 }
 
+.table-row-clickable {
+    cursor: pointer;
+}
+
 .cron-description-hint {
     margin-left: 0.35rem;
     color: var(--muted);
@@ -185,6 +216,68 @@ th.sortable:hover {
 .empty {
     color: var(--muted);
     font-style: italic;
+}
+
+.job-detail-section {
+    margin-top: 1.5rem;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.section-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.section-header .section-heading {
+    margin-bottom: 0;
+}
+
+.section-header-actions {
+    flex-shrink: 0;
+}
+
+.detail-list {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.detail-list dt {
+    color: var(--muted);
+}
+
+.detail-list dd {
+    margin: 0;
+}
+
+.back-link {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.add-schedule-row .actions {
+    margin-top: 0.5rem;
+}
+
+.paper {
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 1rem;
 }
 
 /* Modal */

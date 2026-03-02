@@ -19,12 +19,62 @@ public class SsaApiClient(HttpClient http)
     }
 
     /// <summary>
+    /// GET /jobs/{id}. Returns the job detail or null if not found.
+    /// </summary>
+    public async Task<JobDetail?> GetJobAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var res = await http.GetAsync($"jobs/{id}", cancellationToken);
+        if (res.StatusCode == HttpStatusCode.NotFound)
+            return null;
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<JobDetail>(cancellationToken);
+    }
+
+    /// <summary>
+    /// PUT /jobs/{id}/schedules. Replaces the job's assigned schedules.
+    /// </summary>
+    public async Task SetJobSchedulesAsync(int jobId, int[] scheduleIds, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PutAsJsonAsync($"jobs/{jobId}/schedules", new ScheduleIdsRequest(scheduleIds), cancellationToken);
+        res.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// POST /jobs/{id}/trigger. Enqueues a run. Returns when accepted (202).
+    /// </summary>
+    public async Task TriggerJobAsync(int jobId, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PostAsync($"jobs/{jobId}/trigger", null, cancellationToken);
+        res.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// GET /jobs/{id}/runs. Returns the last 100 runs for the job.
+    /// </summary>
+    public async Task<List<JobRun>> GetJobRunsAsync(int jobId, CancellationToken cancellationToken = default)
+    {
+        var list = await http.GetFromJsonAsync<List<JobRun>>($"jobs/{jobId}/runs", cancellationToken);
+        return list ?? [];
+    }
+
+    /// <summary>
     /// GET /executables. Returns the list of executables.
     /// </summary>
     public async Task<List<Executable>> GetExecutablesAsync(CancellationToken cancellationToken = default)
     {
         var list = await http.GetFromJsonAsync<List<Executable>>("executables", cancellationToken);
         return list ?? [];
+    }
+
+    /// <summary>
+    /// POST /executables. Creates an executable. Returns the created executable on success.
+    /// </summary>
+    public async Task<Executable> CreateExecutableAsync(CreateExecutableRequest request, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PostAsJsonAsync("executables", request, cancellationToken);
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<Executable>(cancellationToken)
+            ?? throw new HttpRequestException("Unexpected empty response from server.");
     }
 
     /// <summary>
