@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SSAReplacement.Api.Domain;
 using SSAReplacement.Api.DTOs;
@@ -25,7 +26,7 @@ public static class ExecutableVersionEndpoints
             return Results.Ok(list.Select(v => ExecutableVersionDto.From(v, includePath: false)));
         });
 
-        group.MapPost("/", async (int executableId, IFormFile file, string entryPointDll, AppDbContext db, IExecutableStorage storage) =>
+        group.MapPost("/", async (int executableId, IFormFile file, [FromForm] string entryPointDll, AppDbContext db, IExecutableStorage storage) =>
         {
             if (await db.Executables.FindAsync(executableId) is null)
                 return Results.NotFound("Executable not found");

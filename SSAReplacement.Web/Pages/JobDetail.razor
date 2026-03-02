@@ -41,84 +41,70 @@ else
         </div>
     </header>
 
-    <section class="job-detail-section paper">
-        <h2 class="section-heading">Details</h2>
-        <dl class="detail-list">
-            <dt>Name</dt>
-            <dd>@_job.Name</dd>
-            <dt>Executable</dt>
-            <dd>@(_job.ExecutableName ?? "—")</dd>
-            <dt>Enabled</dt>
-            <dd><Pill Color="@(_job.IsEnabled ? PillColor.Success : PillColor.Muted)" Text="@(_job.IsEnabled ? "Enabled" : "Disabled")" /></dd>
-            <dt>Created</dt>
-            <dd>@_job.CreatedAt.ToTimeAgo()</dd>
-        </dl>
-    </section>
+    <div class="grid">
+        <div class="row">
+            <section class="col col-span-6 job-detail-section paper">
+                <h2 class="section-heading">Details</h2>
+                <dl class="detail-list">
+                    <dt>Name</dt>
+                    <dd>@_job.Name</dd>
+                    <dt>Executable</dt>
+                    <dd>@(_job.ExecutableName ?? "—")</dd>
+                    <dt>Enabled</dt>
+                    <dd><Pill Color="@(_job.IsEnabled ? PillColor.Success : PillColor.Muted)" Text="@(_job.IsEnabled ? "Enabled" : "Disabled")" /></dd>
+                    <dt>Created</dt>
+                    <dd>@_job.CreatedAt.ToTimeAgo()</dd>
+                </dl>
+            </section>
 
-    <section class="job-detail-section paper">
-        <div class="section-header">
-            <h2 class="section-heading">Schedules</h2>
-            <div class="section-header-actions">
-                <button type="button" @onclick="OpenAddScheduleModal">Add schedule</button>
-            </div>
+            <section class="col col-span-6 job-detail-section paper">
+                <div class="section-header">
+                    <h2 class="section-heading">Schedules</h2>
+                    <div class="section-header-actions">
+                        <button type="button" @onclick="OpenAddScheduleModal">Add schedule</button>
+                    </div>
+                </div>
+                @if (!_job.Schedules.Any())
+                {
+                    <p class="empty">No schedules assigned.</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Cron</th>
+                                <th>Enabled</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var schedule in _job.Schedules)
+                            {
+                                <tr>
+                                    <td>@(schedule.Name ?? "—")</td>
+                                    <td>
+                                        @schedule.CronExpression
+                                        <span class="cron-description-hint" title="@CronDescription.GetDescription(schedule.CronExpression)" aria-label="Schedule description"><i class="bi bi-question-circle"></i></span>
+                                    </td>
+                                    <td><Pill Color="@(schedule.IsEnabled ? PillColor.Success : PillColor.Muted)" Text="@(schedule.IsEnabled ? "Enabled" : "Disabled")" /></td>
+                                    <td>@schedule.CreatedAt.ToTimeAgo()</td>
+                                    <td>
+                                        <button type="button" class="btn-secondary" @onclick="() => RemoveSchedule(schedule.Id)">Remove</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </section>
         </div>
-        @if (!_job.Schedules.Any())
-        {
-            <p class="empty">No schedules assigned.</p>
-        }
-        else
-        {
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Cron</th>
-                        <th>Enabled</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var schedule in _job.Schedules)
-                    {
-                        <tr>
-                            <td>@(schedule.Name ?? "—")</td>
-                            <td>
-                                @schedule.CronExpression
-                                <span class="cron-description-hint" title="@CronDescription.GetDescription(schedule.CronExpression)" aria-label="Schedule description"><i class="bi bi-question-circle"></i></span>
-                            </td>
-                            <td><Pill Color="@(schedule.IsEnabled ? PillColor.Success : PillColor.Muted)" Text="@(schedule.IsEnabled ? "Enabled" : "Disabled")" /></td>
-                            <td>@schedule.CreatedAt.ToTimeAgo()</td>
-                            <td>
-                                <button type="button" class="btn-secondary" @onclick="() => RemoveSchedule(schedule.Id)">Remove</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-        <Modal Title="Add schedule" Visible="_addScheduleModalVisible" OnClose="CloseAddScheduleModal">
-            <div class="form">
-                <div class="row">
-                    <label for="add-schedule-select">Schedule</label>
-                    <SearchableSelect TItem="Schedule"
-                                     Items="_unassignedSchedules"
-                                     Value="@_scheduleToAddId"
-                                     ValueChanged="OnScheduleToAddChanged"
-                                     ValueSelector="s => s.Id"
-                                     TextSelector="@(s => s.Name ?? "—")"
-                                     Placeholder="Select schedule to add…"
-                                     AriaLabel="Select schedule to add" />
-                </div>
-                <div class="actions">
-                    <button type="button" disabled="@(_scheduleToAddId is null)" @onclick="AddSchedule">Add</button>
-                </div>
-            </div>
-        </Modal>
-    </section>
 
-    <section class="job-detail-section paper">
-        <h2 class="section-heading">Recent runs</h2>
+        <div class="row">
+            <section class="col col-span-12 job-detail-section paper">
+                <h2 class="section-heading">Recent runs</h2>
         @if (!_runs.Any())
         {
             <p class="empty">No runs yet.</p>
@@ -155,7 +141,28 @@ else
                 </tbody>
             </table>
         }
-    </section>
+            </section>
+        </div>
+    </div>
+
+    <Modal Title="Add schedule" Visible="_addScheduleModalVisible" OnClose="CloseAddScheduleModal">
+        <div class="form">
+            <div class="row">
+                <label for="add-schedule-select">Schedule</label>
+                <SearchableSelect TItem="Schedule"
+                                  Items="_unassignedSchedules"
+                                  Value="@_scheduleToAddId"
+                                  ValueChanged="OnScheduleToAddChanged"
+                                  ValueSelector="s => s.Id"
+                                  TextSelector="@(s => s.Name ?? "—")"
+                                  Placeholder="Select schedule to add…"
+                                  AriaLabel="Select schedule to add" />
+            </div>
+            <div class="actions">
+                <button type="button" disabled="@(_scheduleToAddId is null)" @onclick="AddSchedule">Add</button>
+            </div>
+        </div>
+    </Modal>
 }
 
 @code {
@@ -193,6 +200,7 @@ else
             var jobTask = Api.GetJobAsync(Id);
             var runsTask = Api.GetJobRunsAsync(Id);
             var schedulesTask = Api.GetSchedulesAsync();
+
             await Task.WhenAll(jobTask, runsTask, schedulesTask);
 
             _job = await jobTask;

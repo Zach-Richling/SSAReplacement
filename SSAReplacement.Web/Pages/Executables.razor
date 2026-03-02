@@ -2,6 +2,7 @@
 @using SSAReplacement.Web.Shared.Form
 @using SSAReplacement.Web.Client
 @inject SsaApiClient Api
+@inject NavigationManager Nav
 
 <PageTitle>Executables</PageTitle>
 
@@ -29,6 +30,16 @@ else if (_error is not null)
         <FormField Label="Name" Required ErrorMessage="@_addExecutable.NameError" InputId="new-executable-name">
             <input id="new-executable-name" type="text" value="@_addExecutable.Name" @oninput="OnAddExecutableNameChanged" placeholder="Executable name" aria-describedby="new-executable-name-error" aria-invalid="@(!string.IsNullOrEmpty(_addExecutable.NameError))" />
         </FormField>
+        <FormField Label="Package (.zip)" Required ErrorMessage="@_addExecutable.FileError" InputId="new-executable-file">
+            <InputFile id="new-executable-file" OnChange="OnAddExecutableFileChanged" accept=".zip" aria-describedby="new-executable-file-error" aria-invalid="@(!string.IsNullOrEmpty(_addExecutable.FileError))" />
+            @if (_addExecutable.SelectedFile is not null)
+            {
+                <span>@_addExecutable.SelectedFile.Name</span>
+            }
+        </FormField>
+        <FormField Label="Entry point DLL" Required ErrorMessage="@_addExecutable.EntryPointError" InputId="new-executable-entrypoint">
+            <input id="new-executable-entrypoint" type="text" value="@_addExecutable.EntryPointDll" @oninput="OnAddExecutableEntryPointChanged" placeholder="e.g. MyApp.dll" aria-describedby="new-executable-entrypoint-error" aria-invalid="@(!string.IsNullOrEmpty(_addExecutable.EntryPointError))" />
+        </FormField>
         <div class="actions">
             <button type="button" @onclick="SubmitAddExecutable" disabled="@_addExecutable.IsSubmitting">Add</button>
             <button type="button" class="btn-secondary" @onclick="CloseAddExecutableModal">Cancel</button>
@@ -53,7 +64,7 @@ else
         <tbody>
             @foreach (var exe in _filteredExecutables)
             {
-                <tr>
+                <tr class="table-row-clickable" role="button" tabindex="0" @onclick="() => NavigateToExecutable(exe.Id)" @onkeydown="e => HandleRowKey(e, exe.Id)">
                     <td>@(exe.Name ?? "—")</td>
                     <td>@(exe.ActiveVersion ?? "—")</td>
                     <td>@exe.CreatedAt.ToTimeAgo()</td>
@@ -64,6 +75,8 @@ else
 }
 
 @code {
+    private const long MaxFileSize = 50 * 1024 * 1024; // 50 MB
+
     private List<Executable> _executables = [];
     private string _searchQuery = "";
     private bool _loading = true;
@@ -105,6 +118,17 @@ else
         _searchQuery = value ?? "";
     }
 
+    private void NavigateToExecutable(int id)
+    {
+        Nav.NavigateTo($"/executables/{id}");
+    }
+
+    private void HandleRowKey(KeyboardEventArgs e, int id)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+            NavigateToExecutable(id);
+    }
+
     private void OpenAddExecutableModal()
     {
         _addExecutable = new AddExecutableFormState { Visible = true };
@@ -120,13 +144,38 @@ else
         _addExecutable = _addExecutable with { Name = e.Value?.ToString() ?? "", NameError = null };
     }
 
+    private void OnAddExecutableFileChanged(InputFileChangeEventArgs e)
+    {
+        _addExecutable = _addExecutable with { SelectedFile = e.File, FileError = null };
+    }
+
+    private void OnAddExecutableEntryPointChanged(ChangeEventArgs e)
+    {
+        _addExecutable = _addExecutable with { EntryPointDll = e.Value?.ToString() ?? "", EntryPointError = null };
+    }
+
     private async Task SubmitAddExecutable()
     {
-        _addExecutable = _addExecutable with { NameError = null };
+        _addExecutable = _addExecutable with { NameError = null, FileError = null, EntryPointError = null };
 
+        var hasError = false;
         if (string.IsNullOrWhiteSpace(_addExecutable.Name))
         {
             _addExecutable = _addExecutable with { NameError = "Enter a name." };
+            hasError = true;
+        }
+        if (_addExecutable.SelectedFile is null)
+        {
+            _addExecutable = _addExecutable with { FileError = "Select a .zip file." };
+            hasError = true;
+        }
+        if (string.IsNullOrWhiteSpace(_addExecutable.EntryPointDll))
+        {
+            _addExecutable = _addExecutable with { EntryPointError = "Enter the entry point DLL." };
+            hasError = true;
+        }
+        if (hasError)
+        {
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -134,7 +183,10 @@ else
         _addExecutable = _addExecutable with { IsSubmitting = true };
         try
         {
-            await Api.CreateExecutableAsync(new CreateExecutableRequest(_addExecutable.Name.Trim()));
+            var executable = await Api.CreateExecutableAsync(new CreateExecutableRequest(_addExecutable.Name.Trim()));
+            await using var stream = _addExecutable.SelectedFile!.OpenReadStream(MaxFileSize);
+            var version = await Api.UploadExecutableVersionAsync(executable.Id, stream, _addExecutable.SelectedFile.Name, _addExecutable.EntryPointDll!.Trim());
+            await Api.ActivateExecutableVersionAsync(executable.Id, version.Id);
             CloseAddExecutableModal();
             await LoadData();
         }
@@ -153,6 +205,10 @@ else
         public bool Visible { get; init; }
         public string Name { get; init; } = "";
         public string? NameError { get; init; }
+        public IBrowserFile? SelectedFile { get; init; }
+        public string? FileError { get; init; }
+        public string EntryPointDll { get; init; } = "";
+        public string? EntryPointError { get; init; }
         public bool IsSubmitting { get; init; }
     }
 }

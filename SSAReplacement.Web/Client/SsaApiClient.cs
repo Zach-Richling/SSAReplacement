@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace SSAReplacement.Web.Client;
@@ -64,6 +65,44 @@ public class SsaApiClient(HttpClient http)
     {
         var list = await http.GetFromJsonAsync<List<Executable>>("executables", cancellationToken);
         return list ?? [];
+    }
+
+    /// <summary>
+    /// GET /executables/{id}. Returns the executable detail or null if not found.
+    /// </summary>
+    public async Task<ExecutableDetail?> GetExecutableAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var res = await http.GetAsync($"executables/{id}", cancellationToken);
+        if (res.StatusCode == HttpStatusCode.NotFound)
+            return null;
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<ExecutableDetail>(cancellationToken);
+    }
+
+    /// <summary>
+    /// POST /executables/{executableId}/versions. Uploads a new version. Requires multipart form: file, entryPointDll. Returns the created version.
+    /// </summary>
+    public async Task<ExecutableVersion> UploadExecutableVersionAsync(int executableId, Stream fileStream, string fileName, string entryPointDll, CancellationToken cancellationToken = default)
+    {
+        using var content = new MultipartFormDataContent();
+        var fileContent = new StreamContent(fileStream);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        content.Add(fileContent, "file", fileName);
+        content.Add(new StringContent(entryPointDll.Trim()), "entryPointDll");
+
+        var res = await http.PostAsync($"executables/{executableId}/versions", content, cancellationToken);
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<ExecutableVersion>(cancellationToken)
+            ?? throw new HttpRequestException("Unexpected empty response from server.");
+    }
+
+    /// <summary>
+    /// POST /executables/{executableId}/versions/{versionId}/activate. Sets the given version as active.
+    /// </summary>
+    public async Task ActivateExecutableVersionAsync(int executableId, int versionId, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PostAsync($"executables/{executableId}/versions/{versionId}/activate", null, cancellationToken);
+        res.EnsureSuccessStatusCode();
     }
 
     /// <summary>
