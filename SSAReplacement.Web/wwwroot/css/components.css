@@ -171,6 +171,17 @@ th.sortable:hover {
     background: var(--surface);
 }
 
+.cron-description-hint {
+    margin-left: 0.35rem;
+    color: var(--muted);
+    cursor: help;
+    vertical-align: middle;
+}
+
+.cron-description-hint .bi {
+    font-size: 1rem;
+}
+
 .empty {
     color: var(--muted);
     font-style: italic;
@@ -215,6 +226,17 @@ th.sortable:hover {
     color: var(--muted);
     font-size: 0.875rem;
     margin-right: 0.5rem;
+}
+
+.label-hint {
+    margin-left: 0.25rem;
+    color: var(--muted);
+    cursor: help;
+    vertical-align: middle;
+}
+
+.label-hint .bi {
+    font-size: 1rem;
 }
 
 .form .row > input,

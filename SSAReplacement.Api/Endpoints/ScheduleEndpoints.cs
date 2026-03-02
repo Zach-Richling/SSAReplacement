@@ -1,3 +1,4 @@
+using Cronos;
 using Microsoft.EntityFrameworkCore;
 using SSAReplacement.Api.Domain;
 using SSAReplacement.Api.DTOs;
@@ -26,6 +27,10 @@ public static class ScheduleEndpoints
 
         group.MapPost("/", async (CreateScheduleRequest req, AppDbContext db, IScheduleHangfireSyncService sync) =>
         {
+            var cronError = ValidateCronExpression(req.CronExpression);
+            if (cronError is not null)
+                return Results.BadRequest(cronError);
+
             var s = new Schedule
             {
                 Name = req.Name,
@@ -40,6 +45,13 @@ public static class ScheduleEndpoints
 
         group.MapPut("/{id:int}", async (int id, UpdateScheduleRequest req, AppDbContext db, IScheduleHangfireSyncService sync) =>
         {
+            if (req.CronExpression is { } cron)
+            {
+                var cronError = ValidateCronExpression(cron);
+                if (cronError is not null)
+                    return Results.BadRequest(cronError);
+            }
+
             var s = await db.Schedules.FindAsync(id);
             if (s is null) return Results.NotFound();
             if (req.Name is not null) s.Name = req.Name;
@@ -59,6 +71,30 @@ public static class ScheduleEndpoints
             await sync.RemoveScheduleAsync(id);
             return Results.NoContent();
         });
+    }
+
+    /// <summary>
+    /// Returns an error message if the cron expression is invalid; null if valid.
+    /// Supports both 5-field (minute hour day month day-of-week) and 6-field (with seconds) expressions.
+    /// </summary>
+    private static string? ValidateCronExpression(string expression)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+            return "Cron expression is required.";
+
+        try
+        {
+            var parts = expression.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 6)
+                CronExpression.Parse(expression, CronFormat.IncludeSeconds);
+            else
+                CronExpression.Parse(expression);
+            return null;
+        }
+        catch (CronFormatException ex)
+        {
+            return "Invalid cron expression: " + ex.Message;
+        }
     }
 
     public record CreateScheduleRequest(string? Name, string CronExpression, bool IsEnabled = true);

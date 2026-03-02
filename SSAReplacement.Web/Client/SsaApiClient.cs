@@ -40,9 +40,41 @@ public class SsaApiClient(HttpClient http)
 
         res.EnsureSuccessStatusCode();
 
-        var job = await res.Content.ReadFromJsonAsync<AddJobResponse>(cancellationToken) 
-        ?? throw new HttpRequestException("Unexpected empty response from server.");
+        var job = await res.Content.ReadFromJsonAsync<AddJobResponse>(cancellationToken)
+            ?? throw new HttpRequestException("Unexpected empty response from server.");
 
         return job;
+    }
+
+    /// <summary>
+    /// GET /schedules. Returns the list of schedules.
+    /// </summary>
+    public async Task<List<Schedule>> GetSchedulesAsync(CancellationToken cancellationToken = default)
+    {
+        var list = await http.GetFromJsonAsync<List<Schedule>>("schedules", cancellationToken);
+        return list ?? [];
+    }
+
+    /// <summary>
+    /// POST /schedules. Creates a schedule. Returns the created schedule on success.
+    /// Throws <see cref="HttpRequestException"/> with the response body message on 400 (e.g. invalid cron).
+    /// </summary>
+    public async Task<Schedule> AddScheduleAsync(CreateScheduleRequest request, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PostAsJsonAsync("schedules", request, cancellationToken);
+
+        if (res.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var message = await res.Content.ReadFromJsonAsync<string>(cancellationToken)
+                ?? await res.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException(string.IsNullOrWhiteSpace(message) ? "Invalid request." : message);
+        }
+
+        res.EnsureSuccessStatusCode();
+
+        var schedule = await res.Content.ReadFromJsonAsync<Schedule>(cancellationToken)
+            ?? throw new HttpRequestException("Unexpected empty response from server.");
+
+        return schedule;
     }
 }

@@ -7,6 +7,10 @@
         {
             <span class="required"> *</span>
         }
+        @if (!string.IsNullOrWhiteSpace(LabelHint))
+        {
+            <span class="label-hint" title="@LabelHint" aria-label="Help"><i class="bi bi-question-circle"></i></span>
+        }
     </label>
     @ChildContent
     @if (!string.IsNullOrWhiteSpace(ErrorMessage))
@@ -30,6 +34,12 @@
 
     [Parameter]
     public string? InputId { get; set; }
+
+    /// <summary>
+    /// Optional tooltip text shown when hovering over a question-circle icon next to the label.
+    /// </summary>
+    [Parameter]
+    public string? LabelHint { get; set; }
 
     private string ErrorId => InputId is not null ? InputId + "-error" : "field-error-" + GetHashCode();
 }
