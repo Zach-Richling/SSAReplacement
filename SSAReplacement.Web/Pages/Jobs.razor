@@ -1,8 +1,8 @@
 @page "/jobs"
 @using SSAReplacement.Web.Shared.Form
 @using SSAReplacement.Web.Shared.Pill
-@using System.Net
-@inject HttpClient Http
+@using SSAReplacement.Web.Client
+@inject SsaApiClient Api
 
 <PageTitle>Jobs</PageTitle>
 
@@ -78,7 +78,7 @@ else
 }
 
 @code {
-    private List<JobSummary> _jobs = [];
+    private List<Job> _jobs = [];
     private List<ExecutableItem> _executables = [];
 
     private string _searchQuery = "";
@@ -89,14 +89,14 @@ else
     private bool _loading = true;
     private string? _error;
 
-    private AddJobRequest _addJob = new();
+    private AddJobFormState _addJob = new();
 
-    private IEnumerable<JobSummary> _filteredJobs =>
+    private IEnumerable<Job> _filteredJobs =>
         string.IsNullOrWhiteSpace(_searchQuery)
             ? _jobs
             : _jobs.Where(j => j.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
 
-    private IEnumerable<JobSummary> _sortedJobs =>
+    private IEnumerable<Job> _sortedJobs =>
         _sortColumn switch
         {
             "name" => _sortAsc ? _filteredJobs.OrderBy(j => j.Name) : _filteredJobs.OrderByDescending(j => j.Name),
@@ -116,20 +116,20 @@ else
         _error = null;
         try
         {
-            var jobsTask = Http.GetFromJsonAsync<List<JobSummary>>("jobs");
-            var executablesTask = Http.GetFromJsonAsync<List<ExecutableDto>>("executables");
+            var jobsTask = Api.GetJobsAsync();
+            var executablesTask = Api.GetExecutablesAsync();
 
             await Task.WhenAll(jobsTask, executablesTask);
 
-            _jobs = await jobsTask ?? [];
-            var execList = await executablesTask ?? [];
+            _jobs = await jobsTask;
+            var execList = await executablesTask;
             _executables = execList.Select(e => new ExecutableItem(e.Id, e.Name)).ToList();
         }
         catch (Exception ex)
         {
             _error = "Failed to load: " + ex.Message;
-            _jobs = new List<JobSummary>();
-            _executables = new List<ExecutableItem>();
+            _jobs = [];
+            _executables = [];
         }
         finally
         {
@@ -186,12 +186,12 @@ else
 
     private void OpenAddJobModal()
     {
-        _addJob = new AddJobRequest { Visible = true };
+        _addJob = new AddJobFormState { Visible = true };
     }
 
     private void CloseAddJobModal()
     {
-        _addJob = new AddJobRequest();
+        _addJob = new AddJobFormState();
     }
 
     private void OnAddJobNameChanged(ChangeEventArgs e)
@@ -231,23 +231,19 @@ else
 
         try
         {
-            var body = new 
-            { 
-                executableId = _addJob.SelectedExecutableId,
-                _addJob.Name,
-                isEnabled = true 
-            };
-            var res = await Http.PostAsJsonAsync("jobs", body);
+            var request = new AddJobRequest(
+                _addJob.SelectedExecutableId!.Value,
+                _addJob.Name.Trim(),
+                IsEnabled: true);
 
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = res.StatusCode == HttpStatusCode.NotFound ? "Executable not found." : await res.Content.ReadAsStringAsync();
-                _addJob = _addJob with { ExecutableError = msg };
-                return;
-            }
+            await Api.AddJobAsync(request);
 
             CloseAddJobModal();
             await LoadData();
+        }
+        catch (HttpRequestException ex)
+        {
+            _addJob = _addJob with { ExecutableError = ex.Message };
         }
         catch (Exception ex)
         {
@@ -259,12 +255,14 @@ else
         }
     }
 
-    private record AddJobRequest
+    /// <summary>
+    /// UI state for the Add Job modal (form values and validation). Not the API request type.
+    /// </summary>
+    private record AddJobFormState
     {
+        public bool Visible { get; init; }
         public string Name { get; init; } = "";
         public int? SelectedExecutableId { get; init; }
-
-        public bool Visible { get; init; }
         public string? NameError { get; init; }
         public string? ExecutableError { get; init; }
         public bool IsSubmitting { get; init; }
