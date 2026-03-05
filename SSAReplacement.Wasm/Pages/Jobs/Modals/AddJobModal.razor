@@ -1,0 +1,65 @@
+﻿@using System.ComponentModel.DataAnnotations
+
+<BbDialog OnOpenChange="OnAddJobOpenChange">
+    <BbDialogTrigger>
+        <BbButton>Add Job</BbButton>
+    </BbDialogTrigger>
+    <BbDialogContent>
+        <BbDialogHeader>
+            <BbDialogTitle>Add Job</BbDialogTitle> 
+        </BbDialogHeader>
+        <EditForm Model="_formState" id="add-job-form">
+            <DataAnnotationsValidator />
+            <BbFormFieldInput TValue="string" @bind-Value="_formState.Name" Label="Name" />
+            <BbFormFieldCombobox TValue="int?" @bind-Value="_formState.SelectedExecutableId" Label="Executable" Class="mt-4" />
+        </EditForm>
+        <BbDialogFooter>
+            <BbButton Type="ButtonType.Submit" form="add-job-form">Add</BbButton>
+        </BbDialogFooter>
+    </BbDialogContent>
+</BbDialog>
+
+@code {
+    [Inject]
+    public required SsaApiClient Api { get; set; }
+
+    private AddJobFormState _formState = new();
+
+    private List<Executable> _executables = [];
+
+    private string? _error;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        try
+        {
+            _executables = await Api.GetExecutablesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = "Failed to executables: " + ex.Message;
+            _executables = [];
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task OnAddJobOpenChange(bool open)
+    {
+        if (!open) 
+            _formState = new AddJobFormState();
+    }
+
+    private class AddJobFormState
+    {
+        [Required(ErrorMessage = "Please enter a job name")]
+        public string Name { get; set; } = "";
+
+        [Required(ErrorMessage = "Please select an executable.")]
+        public int? SelectedExecutableId { get; set; }
+
+        public bool IsSubmitting { get; set; }
+    }
+}

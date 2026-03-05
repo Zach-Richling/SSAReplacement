@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="../SSAReplacement-Old/SSAReplacement.Wasm/SSAReplacement.Wasm.csproj" />
   <Project Path="SSAReplacement.Api/SSAReplacement.Api.csproj" />
   <Project Path="SSAReplacement.Web/SSAReplacement.Web.csproj" Id="b7af93f6-f766-448d-84b7-bf00cbc612e1" />
 </Solution>

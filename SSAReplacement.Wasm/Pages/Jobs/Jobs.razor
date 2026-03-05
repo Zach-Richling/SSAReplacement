@@ -1,0 +1,105 @@
+﻿@page "/jobs"
+@using BlazorBlueprint.Primitives.Table
+@using SSAReplacement.Wasm.Pages.Jobs.Modals
+
+@inject SsaApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Jobs</PageTitle>
+
+<div class="flex flex-row justify-between items-center">
+    <h1 class="text-lg font-semibold m-0">Jobs</h1>
+    <div class="flex items-center flex-1" style="max-width: 20rem;">
+        <BbInputGroup>
+            <BbInputGroupInput Value="@_searchQuery" ValueChanged="OnSearchValueChanged" Placeholder="Filter by name…" AriaLabel="Filter jobs by name" />
+            <BbInputGroupAddon Align="InputGroupAlign.InlineEnd">
+                <LucideIcon Name="search" aria-hidden="true" Size="15"/>
+            </BbInputGroupAddon>
+        </BbInputGroup>
+    </div>
+    <AddJobModal />
+</div>
+
+
+@if (_error is not null)
+{
+    <BbAlert Variant="AlertVariant.Danger">@_error</BbAlert>
+}
+
+<BbDataTable Data="@_sortedJobs" TData="Job" ShowToolbar="false" Class="mt-4 border-none" IsLoading="_loading">
+    <Columns>
+        <BbDataTableColumn TData="Job" TValue="string" Property="@(x => x.Name)" Header="Job Name" Sortable></BbDataTableColumn>
+        <BbDataTableColumn TData="Job" TValue="string" Property="@(x => x.ExecutableName)" Header="Executable" Sortable></BbDataTableColumn>
+        <BbDataTableColumn TData="Job" TValue="bool" Property="@(x => x.IsEnabled)" Header="Enabled" Sortable>
+            <CellTemplate Context="job">
+                <BbBadge Variant="@(job.IsEnabled ? BadgeVariant.Default : BadgeVariant.Destructive)">@(job.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="Job" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created" Sortable>
+            <CellTemplate Context="job">
+                @job.CreatedAt.ToTimeAgo()
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="Job" TValue="string" Header="Actions">
+            <CellTemplate Context="job">
+                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToJob(job.Id)">View</BbButton>
+            </CellTemplate>
+        </BbDataTableColumn>
+    </Columns>
+    <EmptyTemplate>
+        <tr class="flex flex-row justify-center">
+            <td colspan="4" class="p-4 text-center text-muted">No jobs found.</td>
+        </tr>
+    </EmptyTemplate>
+</BbDataTable>
+
+@code {
+    private List<Job> _jobs = [];
+
+    private string _searchQuery = "";
+    private string _sortColumn = "name";
+    private bool _sortAsc = true;
+
+    private bool _loading = true;
+    private string? _error;
+
+    private IEnumerable<Job> _filteredJobs =>
+        string.IsNullOrWhiteSpace(_searchQuery)
+            ? _jobs
+            : _jobs.Where(j => j.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<Job> _sortedJobs =>
+        _sortColumn switch
+        {
+            "name" => _sortAsc ? _filteredJobs.OrderBy(j => j.Name) : _filteredJobs.OrderByDescending(j => j.Name),
+            "executableName" => _sortAsc ? _filteredJobs.OrderBy(j => j.ExecutableName) : _filteredJobs.OrderByDescending(j => j.ExecutableName),
+            "isEnabled" => _sortAsc ? _filteredJobs.OrderBy(j => j.IsEnabled) : _filteredJobs.OrderByDescending(j => j.IsEnabled),
+            _ => _filteredJobs
+        };
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            _jobs = await Api.GetJobsAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = "Failed to load: " + ex.Message;
+            _jobs = [];
+        }
+        finally 
+        { 
+            _loading = false; 
+        }
+    }
+
+    private void OnSearchChanged(string? value) => _searchQuery = value ?? "";
+    private void OnSearchValueChanged(string? v) => _searchQuery = v ?? "";
+    private void NavigateToJob(int jobId) => Nav.NavigateTo($"/jobs/{jobId}");
+}

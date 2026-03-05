@@ -1,0 +1,108 @@
+﻿@using BlazorBlueprint.Primitives.Services
+@inherits LayoutComponentBase
+
+<BbSidebarProvider Variant="SidebarVariant.Floating" HeightClass="h-screen">
+    <BbSidebar>
+        <BbSidebarHeader>
+            <BbSidebarHeaderContent>
+                <div class="flex items-center gap-2 px-2 h-10">
+                    <div class="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                        <LucideIcon Name="zap" class="h-4 w-4" />
+                    </div>
+                    <BbSidebarHeaderInfo>
+                        <span class="text-sm font-semibold">SSA Replacement</span>
+                    </BbSidebarHeaderInfo>
+                </div>
+            </BbSidebarHeaderContent>
+        </BbSidebarHeader>
+        <BbSidebarContent>
+            <BbSidebarGroup>
+                <BbSidebarMenu>
+                    <BbSidebarMenuItem>
+                        <BbSidebarMenuButton Href="/jobs">
+                            <LucideIcon Name="notepad-text" class="h-4 w-4" />
+                            <span>Jobs</span>
+                        </BbSidebarMenuButton>
+                    </BbSidebarMenuItem>
+                    <BbSidebarMenuItem>
+                        <BbSidebarMenuButton Href="/tasks">
+                            <LucideIcon Name="square-check" class="h-4 w-4" />
+                            <span>Tasks</span>
+                        </BbSidebarMenuButton>
+                    </BbSidebarMenuItem>
+                    <BbSidebarMenuItem>
+                        <BbSidebarMenuButton Href="/calendar">
+                            <LucideIcon Name="calendar" class="h-4 w-4" />
+                            <span>Calendar</span>
+                        </BbSidebarMenuButton>
+                    </BbSidebarMenuItem>
+                    <BbSidebarMenuItem>
+                        <BbSidebarMenuButton Href="/search">
+                            <LucideIcon Name="search" class="h-4 w-4" />
+                            <span>Search</span>
+                        </BbSidebarMenuButton>
+                    </BbSidebarMenuItem>
+                </BbSidebarMenu>
+            </BbSidebarGroup>
+            <BbSidebarGroup>
+                <BbSidebarGroupLabel>Projects</BbSidebarGroupLabel>
+                <BbSidebarMenu>
+                    <BbSidebarMenuItem>
+                        <BbSidebarMenuButton Href="/projects/redesign">
+                            <span class="h-2 w-2 rounded-full bg-chart-1 shrink-0"></span>
+                            <span>Website Redesign</span>
+                        </BbSidebarMenuButton>
+                    </BbSidebarMenuItem>
+                    <BbSidebarMenuItem>
+                        <BbSidebarMenuButton Href="/projects/mobile">
+                            <span class="h-2 w-2 rounded-full bg-chart-2 shrink-0"></span>
+                            <span>Mobile App</span>
+                        </BbSidebarMenuButton>
+                    </BbSidebarMenuItem>
+                    <BbSidebarMenuItem>
+                        <BbSidebarMenuButton Href="/projects/api">
+                            <span class="h-2 w-2 rounded-full bg-chart-3 shrink-0"></span>
+                            <span>API Development</span>
+                        </BbSidebarMenuButton>
+                    </BbSidebarMenuItem>
+                </BbSidebarMenu>
+            </BbSidebarGroup>
+        </BbSidebarContent>
+        <BbSidebarFooter>
+            <div class="flex items-center gap-2 px-2 py-2">
+                <BbAvatar Size="AvatarSize.Small">
+                    <BbAvatarFallback>AJ</BbAvatarFallback>
+                </BbAvatar>
+                <div class="flex flex-col flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+                    <span class="text-sm font-medium truncate">Alex Johnson</span>
+                    <span class="text-xs text-muted-foreground truncate">alex@example.com</span>
+                </div>
+            </div>
+        </BbSidebarFooter>
+    </BbSidebar>
+    <BbSidebarInset>
+        <header class="flex items-center gap-2 px-4 py-3 border-b">
+            <BbSidebarTrigger />
+            <BbSeparator Orientation="SeparatorOrientation.Vertical" Class="h-4" />
+            <BbBreadcrumb>
+                <BbBreadcrumbList>
+                    <BbBreadcrumbItem>
+                        <BbBreadcrumbLink Href="#">Home</BbBreadcrumbLink>
+                    </BbBreadcrumbItem>
+                    <BbBreadcrumbSeparator />
+                    <BbBreadcrumbItem>
+                        <BbBreadcrumbPage>Dashboard</BbBreadcrumbPage>
+                    </BbBreadcrumbItem>
+                </BbBreadcrumbList>
+            </BbBreadcrumb>
+        </header>
+        <div class="flex-1 p-4">
+            @Body
+        </div>
+    </BbSidebarInset>
+</BbSidebarProvider>
+
+<BbPortalHost />
+<BbDialogProvider />
+
+
