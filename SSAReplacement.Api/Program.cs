@@ -5,6 +5,7 @@ using Scalar.AspNetCore;
 using SSAReplacement.Api.Endpoints;
 using SSAReplacement.Api.Infrastructure;
 using SSAReplacement.Api.Services;
+using SSAReplacement.Api.Services.JobLogWriter;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,11 @@ builder.Services.AddHangfireServer();
 
 // HTTP client for webhooks
 builder.Services.AddHttpClient();
+
+// Job log queue (singleton) and background writer
+builder.Services.AddSingleton<JobLogQueue>();
+builder.Services.AddSingleton<IJobLogQueue>(sp => sp.GetRequiredService<JobLogQueue>());
+builder.Services.AddHostedService<JobLogWriterBackgroundService>();
 
 // Application services
 builder.Services.AddScoped<IExecutableStorage, FileSystemExecutableStorage>();

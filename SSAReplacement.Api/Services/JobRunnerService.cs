@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SSAReplacement.Api.Domain;
 using SSAReplacement.Api.Infrastructure;
+using SSAReplacement.Api.Services.JobLogWriter;
 using System.Diagnostics;
 
 namespace SSAReplacement.Api.Services;
@@ -8,11 +9,13 @@ namespace SSAReplacement.Api.Services;
 public sealed class JobRunnerService(
     IServiceScopeFactory scopeFactory,
     IExecutableStorage storage,
+    IJobLogQueue jobLogQueue,
     ILogger<JobRunnerService> logger)
 {
     public const string StatusRunning = "Running";
     public const string StatusSuccess = "Success";
     public const string StatusFailed = "Failed";
+    public const string StatusStopped = "Stopped";
 
     public const string TriggerScheduled = "Scheduled";
     public const string TriggerManual = "Manual";
@@ -64,8 +67,7 @@ public sealed class JobRunnerService(
         db.JobRuns.Add(run);
         await db.SaveChangesAsync(cancellationToken);
 
-        var stdout = new List<string>();
-        var stderr = new List<string>();
+        var runId = run.Id;
 
         try
         {
@@ -81,8 +83,16 @@ public sealed class JobRunnerService(
             foreach (var v in job.Variables)
                 process.StartInfo.Environment[$"JobVariables__{v.Key}"] = v.Value;
 
-            process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.Add(e.Data); };
-            process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.Add(e.Data); };
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runId, "StdOut", e.Data, DateTime.UtcNow), CancellationToken.None);
+            };
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runId, "StdErr", e.Data, DateTime.UtcNow), CancellationToken.None);
+            };
 
             process.Start();
             process.BeginOutputReadLine();
@@ -94,25 +104,24 @@ public sealed class JobRunnerService(
             run.ExitCode = process.ExitCode;
             run.Status = process.ExitCode == 0 ? StatusSuccess : StatusFailed;
         }
+        catch (TaskCanceledException)
+        {
+            run.FinishedAt = DateTime.UtcNow;
+            run.Status = StatusStopped;
+            run.ExitCode = -2;
+            _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runId, "StdErr", "The job was forcefully stopped.", DateTime.UtcNow), CancellationToken.None);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error running job {JobId}", jobId);
             run.FinishedAt = DateTime.UtcNow;
             run.Status = StatusFailed;
             run.ExitCode = -1;
-            stderr.Add(ex.ToString());
+            _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runId, "StdErr", ex.ToString(), DateTime.UtcNow), CancellationToken.None);
         }
 
         db.JobRuns.Update(run);
 
-        await db.SaveChangesAsync(cancellationToken);
-
-        if (stdout.Count > 0)
-            db.JobLogs.Add(new JobLog { JobRunId = run.Id, LogType = "StdOut", Content = string.Join(Environment.NewLine, stdout) });
-
-        if (stderr.Count > 0)
-            db.JobLogs.Add(new JobLog { JobRunId = run.Id, LogType = "StdErr", Content = string.Join(Environment.NewLine, stderr) });
-
-        await db.SaveChangesAsync(cancellationToken);
+        await db.SaveChangesAsync(CancellationToken.None);
     }
 }
