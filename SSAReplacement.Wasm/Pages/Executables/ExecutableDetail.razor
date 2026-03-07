@@ -24,7 +24,7 @@ else
                     <div>@_executable.Name</div>
 
                     <div class="font-medium">Active Version</div>
-                    <div>@(_activeVersion?.Version ?? "-")</div>
+                    <div>@(_activeVersion?.Version.ToString() ?? "-")</div>
 
                     <div class="font-medium">Created</div>
                     <div>@_executable.CreatedAt.ToTimeAgo()</div>
@@ -41,7 +41,7 @@ else
             <BbCardContent>
                 <BbDataTable Data="_executable.Versions" TData="ExecutableVersion" ShowToolbar="false">
                     <Columns>
-                        <BbDataTableColumn Header="Version" TData="ExecutableVersion" TValue="string" Property="x => x.Version"/>
+                        <BbDataTableColumn Header="Version" TData="ExecutableVersion" TValue="int" Property="x => x.Version"/>
                         <BbDataTableColumn Header="Entry Point DLL" TData="ExecutableVersion" TValue="string" Property="x => x.EntryPointDll" />
                         <BbDataTableColumn Header="Uploaded At" TData="ExecutableVersion" TValue="DateTime" Property="x => x.UploadedAt">
                             <CellTemplate Context="version">

@@ -18,6 +18,7 @@ public record JobDetailDto(
 {
     public static JobDetailDto From(Job j) => new(
         j.Id, j.ExecutableId, j.Name, j.IsEnabled, j.CreatedAt, j.NotifyEmail, j.Executable?.Name,
-        j.Variables.Select(v => new JobVariableDto(v.Key, v.Value)).ToList(),
-        j.JobSchedules.Select(js => ScheduleDto.From(js.Schedule)).ToList());
+        j.Variables?.Select(v => new JobVariableDto(v.Key, v.Value)).ToList() ?? [],
+        j.JobSchedules?.Select(js => ScheduleDto.From(js.Schedule)).ToList() ?? []
+    );
 }

@@ -6,12 +6,12 @@ public record ExecutableDto(int Id, string Name, DateTime CreatedAt, int ActiveV
 {
     public static ExecutableDto From(Executable e) => new(
         e.Id, e.Name, e.CreatedAt,
-        e.Versions.First(v => v.IsActive).Version);
+        e.Versions.FirstOrDefault(v => v.IsActive)?.Version ?? 0);
 }
 
 public record ExecutableDetailDto(int Id, string? Name, DateTime CreatedAt, IReadOnlyList<ExecutableVersionDto> Versions)
 {
     public static ExecutableDetailDto From(Executable e) => new(
         e.Id, e.Name, e.CreatedAt,
-        e.Versions.Select(v => ExecutableVersionDto.From(v)).ToList());
+        e.Versions?.Select(ExecutableVersionDto.From).ToList() ?? []);
 }

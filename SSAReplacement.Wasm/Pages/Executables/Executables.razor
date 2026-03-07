@@ -22,9 +22,9 @@
 <BbDataTable Data="_filteredExecutables" TData="Executable" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
     <Columns>
         <BbDataTableColumn TData="Executable" TValue="string" Property="@(x => x.Name)" Header="Executable" Sortable />
-        <BbDataTableColumn TData="Executable" TValue="string" Property="@(x => x.ActiveVersion)" Header="Active Version" Sortable>
+        <BbDataTableColumn TData="Executable" TValue="int" Property="@(x => x.ActiveVersion)" Header="Active Version" Sortable>
             <CellTemplate Context="executable">
-                <BbBadge Variant="@(string.IsNullOrEmpty(executable.ActiveVersion) ? BadgeVariant.Destructive : BadgeVariant.Default)">@(executable.ActiveVersion ?? "-")</BbBadge>
+                <BbBadge Variant="@(executable.ActiveVersion == 0 ? BadgeVariant.Destructive : BadgeVariant.Default)">@(executable.ActiveVersion == 0 ? "-" : executable.ActiveVersion.ToString())</BbBadge>
             </CellTemplate>
         </BbDataTableColumn>
         <BbDataTableColumn TData="Executable" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created" Sortable>
