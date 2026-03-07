@@ -51,8 +51,7 @@ public static class ExecutableVersionEndpoints
             var version = new ExecutableVersion
             {
                 ExecutableId = executableId,
-                Version = versionNumber.ToString(),
-                Path = "",
+                Version = versionNumber,
                 EntryPointDll = entryPointDll.Trim(),
                 IsActive = false
             };
@@ -61,9 +60,8 @@ public static class ExecutableVersionEndpoints
 
             await using var stream = file.OpenReadStream();
             var versionDir = await storage.SaveVersionAsync(executableId, versionNumber, stream);
-            version.Path = versionDir;
 
-            var isParsed = TryExtractExecutableParameters(version, out var parameters);
+            var isParsed = TryExtractExecutableParameters(Path.Combine(versionDir, version.EntryPointDll), out var parameters);
 
             if (!isParsed)
             {
@@ -99,10 +97,8 @@ public static class ExecutableVersionEndpoints
         });
     }
 
-    private static bool TryExtractExecutableParameters(ExecutableVersion version, out List<ExecutableParameter> parameters)
+    private static bool TryExtractExecutableParameters(string entryPointPath, out List<ExecutableParameter> parameters)
     {
-        var entryPointPath = Path.Combine(version.Path, version.EntryPointDll);
-
         parameters = [];
 
         if (!File.Exists(entryPointPath))
@@ -129,7 +125,6 @@ public static class ExecutableVersionEndpoints
                 Name = property.Name,
                 Description = description is DescriptionAttribute desc ? desc.Description : null,
                 TypeName = type.Name,
-                ExecutableVersionId = version.Id,
                 Required = isRequired,
                 DefaultValue = defaultValue?.ToString()
             });

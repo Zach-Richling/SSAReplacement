@@ -33,7 +33,6 @@ builder.Services.AddHttpClient();
 
 // Application services
 builder.Services.AddScoped<IExecutableStorage, FileSystemExecutableStorage>();
-builder.Services.AddScoped<IJobNotificationSender, WebhookNotificationSender>();
 builder.Services.AddScoped<JobRunnerService>();
 builder.Services.AddScoped<ScheduleRunnerService>();
 builder.Services.AddScoped<IScheduleHangfireSyncService, ScheduleHangfireSyncService>();

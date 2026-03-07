@@ -7,7 +7,6 @@ public class Job
     public required string Name { get; set; }
     public bool IsEnabled { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string? WebhookUrl { get; set; }
     public string? NotifyEmail { get; set; }
 
     public Executable Executable { get; set; } = null!;

@@ -36,8 +36,7 @@ public sealed class InitialSchema : Migration
         Create.Table("ExecutableVersion")
             .WithColumn("Id").AsInt32().PrimaryKey().Identity()
             .WithColumn("ExecutableId").AsInt32().NotNullable()
-            .WithColumn("Version").AsString(64).NotNullable()
-            .WithColumn("Path").AsString(2048).NotNullable()
+            .WithColumn("Version").AsInt32().NotNullable()
             .WithColumn("EntryPointDll").AsString(256).NotNullable()
             .WithColumn("UploadedAt").AsDateTime2().NotNullable()
             .WithColumn("IsActive").AsBoolean().NotNullable();
@@ -62,6 +61,7 @@ public sealed class InitialSchema : Migration
         Create.Table("JobLog")
             .WithColumn("Id").AsInt32().PrimaryKey().Identity()
             .WithColumn("JobRunId").AsInt32().NotNullable()
+            .WithColumn("LogDate").AsDateTime2().NotNullable()
             .WithColumn("LogType").AsString(16).NotNullable()
             .WithColumn("Content").AsString().NotNullable();
 

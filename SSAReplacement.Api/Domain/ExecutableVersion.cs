@@ -4,8 +4,7 @@ public class ExecutableVersion
 {
     public int Id { get; set; }
     public int ExecutableId { get; set; }
-    public string Version { get; set; } = "";
-    public string Path { get; set; } = "";
+    public int Version { get; set; }
     public string EntryPointDll { get; set; } = "";
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; }

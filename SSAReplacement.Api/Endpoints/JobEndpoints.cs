@@ -46,7 +46,6 @@ public static class JobEndpoints
                 ExecutableId = req.ExecutableId,
                 Name = req.Name,
                 IsEnabled = req.IsEnabled,
-                WebhookUrl = req.WebhookUrl,
                 NotifyEmail = req.NotifyEmail
             };
 
@@ -63,7 +62,6 @@ public static class JobEndpoints
             if (req.ExecutableId is { } eid) j.ExecutableId = eid;
             if (req.Name is not null) j.Name = req.Name;
             if (req.IsEnabled is { } en) j.IsEnabled = en;
-            if (req.WebhookUrl is not null) j.WebhookUrl = req.WebhookUrl;
             if (req.NotifyEmail is not null) j.NotifyEmail = req.NotifyEmail;
             await db.SaveChangesAsync();
             return Results.Ok(JobDto.From(j));
@@ -124,8 +122,8 @@ public static class JobEndpoints
         });
     }
 
-    public record CreateJobRequest(int ExecutableId, string Name, bool IsEnabled = true, string? WebhookUrl = null, string? NotifyEmail = null);
-    public record UpdateJobRequest(int? ExecutableId, string? Name, bool? IsEnabled, string? WebhookUrl = null, string? NotifyEmail = null);
+    public record CreateJobRequest(int ExecutableId, string Name, bool IsEnabled = true, string? NotifyEmail = null);
+    public record UpdateJobRequest(int? ExecutableId, string? Name, bool? IsEnabled, string? NotifyEmail = null);
     public record ScheduleIdsRequest(int[]? ScheduleIds);
     public record VariablesRequest(Dictionary<string, string>? Variables);
 }

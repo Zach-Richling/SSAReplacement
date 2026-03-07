@@ -13,6 +13,7 @@ public sealed class JobRunnerService(
     public const string StatusRunning = "Running";
     public const string StatusSuccess = "Success";
     public const string StatusFailed = "Failed";
+
     public const string TriggerScheduled = "Scheduled";
     public const string TriggerManual = "Manual";
 
@@ -20,11 +21,10 @@ public sealed class JobRunnerService(
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var notifier = scope.ServiceProvider.GetRequiredService<IJobNotificationSender>();
 
         var job = await db.Jobs
             .Include(j => j.Executable)
-            .ThenInclude(e => e.Versions.Where(v => v.IsActive))
+                .ThenInclude(e => e.Versions.Where(v => v.IsActive))
             .Include(j => j.Variables)
             .AsNoTracking()
             .FirstOrDefaultAsync(j => j.Id == jobId, cancellationToken);
@@ -42,7 +42,7 @@ public sealed class JobRunnerService(
             return;
         }
 
-        var versionDir = storage.GetVersionDirectory(job.ExecutableId, activeVersion.Id);
+        var versionDir = storage.GetVersionDirectory(job.ExecutableId, activeVersion.Version);
         var dllPath = Path.Combine(versionDir, activeVersion.EntryPointDll);
 
         if (!File.Exists(dllPath))
@@ -87,6 +87,7 @@ public sealed class JobRunnerService(
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
+
             await process.WaitForExitAsync(cancellationToken);
 
             run.FinishedAt = DateTime.UtcNow;
@@ -103,6 +104,7 @@ public sealed class JobRunnerService(
         }
 
         db.JobRuns.Update(run);
+
         await db.SaveChangesAsync(cancellationToken);
 
         if (stdout.Count > 0)
@@ -112,7 +114,5 @@ public sealed class JobRunnerService(
             db.JobLogs.Add(new JobLog { JobRunId = run.Id, LogType = "StdErr", Content = string.Join(Environment.NewLine, stderr) });
 
         await db.SaveChangesAsync(cancellationToken);
-
-        await notifier.SendJobResultAsync(run, cancellationToken);
     }
 }
