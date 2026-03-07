@@ -4,6 +4,9 @@ using SSAReplacement.Api.Domain;
 using SSAReplacement.Api.DTOs;
 using SSAReplacement.Api.Infrastructure;
 using SSAReplacement.Api.Services;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 
 namespace SSAReplacement.Api.Endpoints;
 
@@ -24,6 +27,19 @@ public static class ExecutableVersionEndpoints
                 .ToListAsync();
 
             return Results.Ok(list.Select(v => ExecutableVersionDto.From(v, includePath: false)));
+        });
+
+        group.MapGet("/{versionId:int}/parameters", async (int executableId, int versionId, AppDbContext db) =>
+        {
+            var version = await db.ExecutableVersions
+                .AsNoTracking()
+                .Include(v => v.Parameters)
+                .FirstOrDefaultAsync(v => v.ExecutableId == executableId && v.Id == versionId);
+
+            if (version is null)
+                return Results.NotFound();
+
+            return Results.Ok(version.Parameters.Select(ExecutableParameterDto.From).ToList());
         });
 
         group.MapPost("/", async (int executableId, IFormFile file, [FromForm] string entryPointDll, AppDbContext db, IExecutableStorage storage) =>
@@ -47,6 +63,18 @@ public static class ExecutableVersionEndpoints
             var versionDir = await storage.SaveVersionAsync(executableId, versionNumber, stream);
             version.Path = versionDir;
 
+            var isParsed = TryExtractExecutableParameters(version, out var parameters);
+
+            if (!isParsed)
+            {
+                if (Directory.Exists(versionDir))
+                    Directory.Delete(versionDir, true);
+
+                return Results.InternalServerError();
+            }
+
+            version.Parameters = parameters;
+
             await db.SaveChangesAsync();
 
             return Results.Created($"/executables/{executableId}/versions/{version.Id}", ExecutableVersionDto.From(version));
@@ -69,5 +97,44 @@ public static class ExecutableVersionEndpoints
 
             return Results.Ok(ExecutableVersionDto.From(version));
         });
+    }
+
+    private static bool TryExtractExecutableParameters(ExecutableVersion version, out List<ExecutableParameter> parameters)
+    {
+        var entryPointPath = Path.Combine(version.Path, version.EntryPointDll);
+
+        parameters = [];
+
+        if (!File.Exists(entryPointPath))
+            return false;
+
+        var assembly = Assembly.LoadFrom(entryPointPath);
+        var settingsType = assembly.DefinedTypes.Where(x => x.Name == "Settings").FirstOrDefault();
+
+        if (settingsType is null)
+            return true;
+
+        var properties = settingsType.GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(x => x.CanRead && x.CanWrite);
+        var settingsObject = Activator.CreateInstance(settingsType);
+
+        foreach (var property in properties)
+        {
+            var type = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+            var isRequired = property.GetCustomAttributes().Any(attr => attr.GetType() == typeof(RequiredAttribute));
+            var defaultValue = property.GetValue(settingsObject);
+            var description = property.GetCustomAttributes().FirstOrDefault(attr => attr.GetType() == typeof(DescriptionAttribute));
+
+            parameters.Add(new ExecutableParameter()
+            {
+                Name = property.Name,
+                Description = description is DescriptionAttribute desc ? desc.Description : null,
+                TypeName = type.Name,
+                ExecutableVersionId = version.Id,
+                Required = isRequired,
+                DefaultValue = defaultValue?.ToString()
+            });
+        }
+
+        return true;
     }
 }

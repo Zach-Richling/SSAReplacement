@@ -1,0 +1,108 @@
+﻿@using System.ComponentModel.DataAnnotations
+
+<BbDialog @bind-Open="IsOpen">
+    <BbDialogTrigger>
+        <BbButton>Add Schedule</BbButton>
+    </BbDialogTrigger>
+    <BbDialogContent>
+        <BbDialogHeader>
+            <BbDialogTitle>Add a schedule</BbDialogTitle>
+        </BbDialogHeader>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <BbAlert Variant="AlertVariant.Danger">@_error</BbAlert>
+        }
+        <EditForm EditContext="_editContext" id="add-schedule-form" OnValidSubmit="SubmitAddSchedule">
+            <DataAnnotationsValidator />
+            <BbField>
+                <BbFieldLabel For="schedule-name">Name</BbFieldLabel>
+                <BbInputField TValue="string" @bind-Value="_formState.Name" Id="schedule-name" />
+                <ValidationMessage For="() => _formState.Name" />
+            </BbField>
+            <BbField Class="mt-4" Orientation="FieldOrientation.Responsive">
+                <BbFieldLabel For="cron-expression">Cron Expression</BbFieldLabel>
+                <BbInputField TValue="string" @bind-Value="_formState.CronExpression" Id="cron-expression" Placeholder="* * * * *" />
+                <ValidationMessage For="() => _formState.CronExpression" />
+                <BbFieldDescription>@CronHelper.GetDescription(_formState.CronExpression)</BbFieldDescription>
+            </BbField>
+        </EditForm>
+        <BbDialogFooter>
+            <BbButton Type="ButtonType.Submit" form="add-schedule-form">Add</BbButton>
+        </BbDialogFooter>
+    </BbDialogContent>
+</BbDialog>
+
+@code {
+    [Inject]
+    public required SsaApiClient Api { get; set; }
+
+    [Parameter]
+    public EventCallback OnScheduleCreated { get; set; }
+
+    public bool IsOpen { get; set; }
+
+    private AddScheduleFormState _formState = null!;
+    private EditContext _editContext = null!;
+    private ValidationMessageStore _validationMessageStore = null!;
+
+    private string? _error;
+
+    protected override void OnParametersSet()
+    {
+        _formState = new();
+        _editContext = new(_formState);
+
+        _editContext.OnFieldChanged += (sender, args) =>
+        {
+            _validationMessageStore.Clear(args.FieldIdentifier);
+        };
+
+        _validationMessageStore = new(_editContext);
+    }
+
+    private async Task SubmitAddSchedule()
+    {
+        try
+        {
+            Console.WriteLine("Got here");
+            var fieldId = new FieldIdentifier(_formState, nameof(_formState.CronExpression));
+            _validationMessageStore.Clear(fieldId);
+
+            var cronMessage = CronHelper.Validate(_formState.CronExpression);
+
+            if (!string.IsNullOrEmpty(cronMessage))
+            {
+                Console.WriteLine("Adding validation message: " + cronMessage);
+                _validationMessageStore.Add(fieldId, cronMessage);
+                _editContext.NotifyValidationStateChanged();
+                return;
+            }
+
+            await Api.AddScheduleAsync(new CreateScheduleRequest(
+                _formState.Name,
+                _formState.CronExpression));
+
+            if (OnScheduleCreated.HasDelegate)
+            {
+                await OnScheduleCreated.InvokeAsync();
+            }
+
+            IsOpen = false;
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            _error = "Failed to add schedule: " + e.Message;
+        }
+    }
+
+    private class AddScheduleFormState
+    {
+        [Required(ErrorMessage = "Please enter a name for the schedule.")]
+        public string Name { get; set; } = "";
+
+        [Required(ErrorMessage = "Please enter a cron expression.")]
+        public string CronExpression { get; set; } = "";
+    }
+}

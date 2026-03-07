@@ -81,14 +81,20 @@ public static class JobEndpoints
         group.MapPut("/{id:int}/schedules", async (int id, ScheduleIdsRequest request, AppDbContext db) =>
         {
             var job = await db.Jobs.Include(j => j.JobSchedules).FirstOrDefaultAsync(j => j.Id == id);
-            if (job is null) return Results.NotFound();
+
+            if (job is null)
+                return Results.NotFound();
+
             job.JobSchedules.Clear();
+
             foreach (var sid in request.ScheduleIds ?? [])
             {
                 if (await db.Schedules.AnyAsync(s => s.Id == sid))
-                    job.JobSchedules.Add(new JobSchedule { JobId = id, ScheduleId = sid });
+                    job.JobSchedules.Add(new JobSchedule { ScheduleId = sid });
             }
+
             await db.SaveChangesAsync();
+
             return Results.Ok();
         });
 
@@ -97,7 +103,7 @@ public static class JobEndpoints
             var job = await db.Jobs.Include(j => j.Variables).FirstOrDefaultAsync(j => j.Id == id);
             if (job is null) return Results.NotFound();
             job.Variables.Clear();
-            foreach (var (k, v) in request.Variables ?? new Dictionary<string, string>())
+            foreach (var (k, v) in request.Variables ?? [])
                 job.Variables.Add(new JobVariable { JobId = id, Key = k, Value = v });
             await db.SaveChangesAsync();
             return Results.Ok();

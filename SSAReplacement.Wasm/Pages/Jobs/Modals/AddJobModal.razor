@@ -1,17 +1,29 @@
 ﻿@using System.ComponentModel.DataAnnotations
 
-<BbDialog OnOpenChange="OnAddJobOpenChange">
+<BbDialog @bind-Open="IsOpen">
     <BbDialogTrigger>
         <BbButton>Add Job</BbButton>
     </BbDialogTrigger>
     <BbDialogContent>
         <BbDialogHeader>
-            <BbDialogTitle>Add Job</BbDialogTitle> 
+            <BbDialogTitle>Add a job</BbDialogTitle> 
         </BbDialogHeader>
-        <EditForm Model="_formState" id="add-job-form">
+        @if(!string.IsNullOrEmpty(_error))
+        {
+            <BbAlert Variant="AlertVariant.Danger">@_error</BbAlert>
+        }
+        <EditForm Model="_formState" id="add-job-form" OnValidSubmit="SubmitAddJob">
             <DataAnnotationsValidator />
-            <BbFormFieldInput TValue="string" @bind-Value="_formState.Name" Label="Name" />
-            <BbFormFieldCombobox TValue="int?" @bind-Value="_formState.SelectedExecutableId" Label="Executable" Class="mt-4" />
+            <BbField>
+                <BbFieldLabel For="job-name">Name</BbFieldLabel>
+                <BbInputField TValue="string" @bind-Value="_formState.Name" Id="job-name" />
+                <ValidationMessage For="() => _formState.Name" />
+            </BbField>
+            <BbField Class="mt-4" Orientation="FieldOrientation.Responsive">
+                <BbFieldLabel For="executable-id">Executable</BbFieldLabel>
+                <BbCombobox TValue="int" Options="_selectOptions" @bind-Value="_formState.SelectedExecutableId" />
+                <ValidationMessage For="() => _formState.SelectedExecutableId" />
+            </BbField>
         </EditForm>
         <BbDialogFooter>
             <BbButton Type="ButtonType.Submit" form="add-job-form">Add</BbButton>
@@ -23,12 +35,17 @@
     [Inject]
     public required SsaApiClient Api { get; set; }
 
+    [Parameter]
+    public EventCallback OnJobCreated { get; set; }
+
+    public bool IsOpen { get; set; }
+
     private AddJobFormState _formState = new();
 
     private List<Executable> _executables = [];
+    private List<SelectOption<int>> _selectOptions => _executables.Select(e => new SelectOption<int>(e.Id, e.Name)).ToList();
 
     private string? _error;
-    private bool _loading = true;
 
     protected override async Task OnInitializedAsync() => await LoadData();
 
@@ -43,13 +60,27 @@
             _error = "Failed to executables: " + ex.Message;
             _executables = [];
         }
-        finally { _loading = false; }
     }
 
-    private async Task OnAddJobOpenChange(bool open)
+    private async Task SubmitAddJob()
     {
-        if (!open) 
-            _formState = new AddJobFormState();
+        try
+        {
+            await Api.AddJobAsync(new AddJobRequest(
+                _formState.SelectedExecutableId,
+                _formState.Name));
+
+            if (OnJobCreated.HasDelegate)
+            {
+                await OnJobCreated.InvokeAsync();
+            }
+
+            IsOpen = false;
+        } 
+        catch (Exception e)
+        {
+            _error = "Failed to add job: " + e.Message;
+        }
     }
 
     private class AddJobFormState
@@ -57,9 +88,7 @@
         [Required(ErrorMessage = "Please enter a job name")]
         public string Name { get; set; } = "";
 
-        [Required(ErrorMessage = "Please select an executable.")]
-        public int? SelectedExecutableId { get; set; }
-
-        public bool IsSubmitting { get; set; }
+        [Range(1, double.MaxValue, ErrorMessage = "Please select an executable.")]
+        public int SelectedExecutableId { get; set; }
     }
 }

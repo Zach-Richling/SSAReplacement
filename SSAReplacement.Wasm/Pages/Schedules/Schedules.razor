@@ -1,0 +1,80 @@
+﻿@page "/schedules"
+@using SSAReplacement.Wasm.Pages.Schedules.Modals
+
+@inject SsaApiClient Api
+@inject BreadcrumbService Breadcrumbs
+
+<PageTitle>Schedules</PageTitle>
+
+<div class="flex flex-row justify-between items-center">
+    <h1 class="text-lg font-semibold m-0">Schedules</h1>
+    <div class="flex items-center flex-1" style="max-width: 20rem;">
+        <SearchBar @bind-Value="_searchQuery" AriaLabel="Filter schedules by name" />
+    </div>
+    <AddScheduleModal OnScheduleCreated="LoadData" />
+</div>
+
+@if (_error is not null)
+{
+    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
+}
+
+<BbDataTable Data="_schedules" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
+    <Columns>
+        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.Name)" Header="Name"></BbDataTableColumn>
+        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CronExpression)" Header="Frequency">
+            <CellTemplate Context="schedule">
+                <span>@CronHelper.GetDescription(schedule.CronExpression)</span>
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="Schedule" TValue="bool" Property="@(x => x.IsEnabled)" Header="Enabled">
+            <CellTemplate Context="schedule">
+                <BbBadge Variant="@(schedule.IsEnabled ? BadgeVariant.Default : BadgeVariant.Secondary)">@(schedule.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="Schedule" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created">
+            <CellTemplate Context="schedule">
+                @schedule.CreatedAt.ToTimeAgo()
+            </CellTemplate>
+        </BbDataTableColumn>
+    </Columns>
+</BbDataTable>
+
+@code {
+    private List<Schedule> _schedules = [];
+    private string _searchQuery = "";
+
+    private bool _loading = true;
+    private string? _error;
+
+    private IEnumerable<Schedule> _filteredSchedules =>
+        string.IsNullOrWhiteSpace(_searchQuery)
+            ? _schedules
+            : _schedules.Where(s => s.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        Breadcrumbs.Set(new BreadcrumbItem() { Text = "Schedules" });
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            _schedules = await Api.GetSchedulesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = "Failed to load: " + ex.Message;
+            _schedules = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

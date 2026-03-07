@@ -5,3 +5,10 @@
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+@code {
+    [Inject]
+    public required BreadcrumbService Breadcrumbs { get; set; }
+
+    protected override void OnInitialized() => Breadcrumbs.Set();
+}

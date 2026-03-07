@@ -1,6 +1,8 @@
 ﻿@using BlazorBlueprint.Primitives.Services
 @inherits LayoutComponentBase
 
+@inject BreadcrumbService BreadcrumbService
+
 <BbSidebarProvider Variant="SidebarVariant.Floating" HeightClass="h-screen">
     <BbSidebar>
         <BbSidebarHeader>
@@ -25,44 +27,15 @@
                         </BbSidebarMenuButton>
                     </BbSidebarMenuItem>
                     <BbSidebarMenuItem>
-                        <BbSidebarMenuButton Href="/tasks">
-                            <LucideIcon Name="square-check" class="h-4 w-4" />
-                            <span>Tasks</span>
-                        </BbSidebarMenuButton>
-                    </BbSidebarMenuItem>
-                    <BbSidebarMenuItem>
-                        <BbSidebarMenuButton Href="/calendar">
+                        <BbSidebarMenuButton Href="/schedules">
                             <LucideIcon Name="calendar" class="h-4 w-4" />
-                            <span>Calendar</span>
+                            <span>Schedules</span>
                         </BbSidebarMenuButton>
                     </BbSidebarMenuItem>
                     <BbSidebarMenuItem>
-                        <BbSidebarMenuButton Href="/search">
-                            <LucideIcon Name="search" class="h-4 w-4" />
-                            <span>Search</span>
-                        </BbSidebarMenuButton>
-                    </BbSidebarMenuItem>
-                </BbSidebarMenu>
-            </BbSidebarGroup>
-            <BbSidebarGroup>
-                <BbSidebarGroupLabel>Projects</BbSidebarGroupLabel>
-                <BbSidebarMenu>
-                    <BbSidebarMenuItem>
-                        <BbSidebarMenuButton Href="/projects/redesign">
-                            <span class="h-2 w-2 rounded-full bg-chart-1 shrink-0"></span>
-                            <span>Website Redesign</span>
-                        </BbSidebarMenuButton>
-                    </BbSidebarMenuItem>
-                    <BbSidebarMenuItem>
-                        <BbSidebarMenuButton Href="/projects/mobile">
-                            <span class="h-2 w-2 rounded-full bg-chart-2 shrink-0"></span>
-                            <span>Mobile App</span>
-                        </BbSidebarMenuButton>
-                    </BbSidebarMenuItem>
-                    <BbSidebarMenuItem>
-                        <BbSidebarMenuButton Href="/projects/api">
-                            <span class="h-2 w-2 rounded-full bg-chart-3 shrink-0"></span>
-                            <span>API Development</span>
+                        <BbSidebarMenuButton Href="/executables">
+                            <LucideIcon Name="square-check" class="h-4 w-4" />
+                            <span>Executables</span>
                         </BbSidebarMenuButton>
                     </BbSidebarMenuItem>
                 </BbSidebarMenu>
@@ -86,13 +59,22 @@
             <BbSeparator Orientation="SeparatorOrientation.Vertical" Class="h-4" />
             <BbBreadcrumb>
                 <BbBreadcrumbList>
-                    <BbBreadcrumbItem>
-                        <BbBreadcrumbLink Href="#">Home</BbBreadcrumbLink>
-                    </BbBreadcrumbItem>
-                    <BbBreadcrumbSeparator />
-                    <BbBreadcrumbItem>
-                        <BbBreadcrumbPage>Dashboard</BbBreadcrumbPage>
-                    </BbBreadcrumbItem>
+                    @foreach (var item in BreadcrumbService.Items)
+                    {
+                        if (item != BreadcrumbService.Items.Last())
+                        {
+                            <BbBreadcrumbItem>
+                                <BbBreadcrumbLink Href="@item.Url">@item.Text</BbBreadcrumbLink>
+                            </BbBreadcrumbItem>
+                            <BbBreadcrumbSeparator />
+                        }
+                        else
+                        {
+                            <BbBreadcrumbItem>
+                                <BbBreadcrumbPage>@item.Text</BbBreadcrumbPage>
+                            </BbBreadcrumbItem>
+                        }
+                    }
                 </BbBreadcrumbList>
             </BbBreadcrumb>
         </header>
@@ -104,5 +86,9 @@
 
 <BbPortalHost />
 <BbDialogProvider />
+<BbToastProvider />
 
+@code {
+    protected override void OnInitialized() => BreadcrumbService.OnChange += StateHasChanged;
+}
 

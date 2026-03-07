@@ -37,9 +37,9 @@ public class SsaApiClient(HttpClient http)
     /// <summary>
     /// PUT /jobs/{id}/schedules. Replaces the job's assigned schedules.
     /// </summary>
-    public async Task SetJobSchedulesAsync(int jobId, int[] scheduleIds, CancellationToken cancellationToken = default)
+    public async Task SetJobSchedulesAsync(int jobId, IEnumerable<int> scheduleIds, CancellationToken cancellationToken = default)
     {
-        var res = await http.PutAsJsonAsync($"jobs/{jobId}/schedules", new ScheduleIdsRequest(scheduleIds), cancellationToken);
+        var res = await http.PutAsJsonAsync($"jobs/{jobId}/schedules", new PutJobSchedulesRequest(scheduleIds), cancellationToken);
         res.EnsureSuccessStatusCode();
     }
 
@@ -88,10 +88,11 @@ public class SsaApiClient(HttpClient http)
     public async Task<ExecutableVersion> UploadExecutableVersionAsync(int executableId, Stream fileStream, string fileName, string entryPointDll, CancellationToken cancellationToken = default)
     {
         using var content = new MultipartFormDataContent();
+
         var fileContent = new StreamContent(fileStream);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         content.Add(fileContent, "file", fileName);
-        content.Add(new StringContent(entryPointDll.Trim()), "entryPointDll");
+        content.Add(new StringContent(entryPointDll), "entryPointDll");
 
         var res = await http.PostAsync($"executables/{executableId}/versions", content, cancellationToken);
         res.EnsureSuccessStatusCode();
@@ -130,14 +131,10 @@ public class SsaApiClient(HttpClient http)
 
     /// <summary>
     /// POST /jobs. Creates a job. Returns the created job on success.
-    /// Throws <see cref="HttpRequestException"/> with message on 404 (executable not found) or other error.
     /// </summary>
     public async Task<AddJobResponse> AddJobAsync(AddJobRequest request, CancellationToken cancellationToken = default)
     {
         var res = await http.PostAsJsonAsync("jobs", request, cancellationToken);
-
-        if (res.StatusCode == HttpStatusCode.NotFound)
-            throw new HttpRequestException("Executable not found.");
 
         res.EnsureSuccessStatusCode();
 

@@ -10,6 +10,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<Schedule> Schedules => Set<Schedule>();
     public DbSet<Executable> Executables => Set<Executable>();
     public DbSet<ExecutableVersion> ExecutableVersions => Set<ExecutableVersion>();
+    public DbSet<ExecutableParameter> ExecutableParameters => Set<ExecutableParameter>();
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<JobSchedule> JobSchedules => Set<JobSchedule>();
     public DbSet<JobVariable> JobVariables => Set<JobVariable>();
@@ -26,6 +27,7 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<JobVariable>().ToTable("JobVariable");
         modelBuilder.Entity<JobRun>().ToTable("JobRun");
         modelBuilder.Entity<JobLog>().ToTable("JobLog");
+        modelBuilder.Entity<ExecutableParameter>().ToTable("ExecutableParameter");
 
         modelBuilder.Entity<Job>(b =>
         {
@@ -35,7 +37,6 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<JobSchedule>(b =>
         {
             b.HasKey(e => e.Id);
-            b.HasKey(e => new { e.JobId, e.ScheduleId });
             b.HasOne(e => e.Job).WithMany(j => j.JobSchedules).HasForeignKey(e => e.JobId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(e => e.Schedule).WithMany(s => s.JobSchedules).HasForeignKey(e => e.ScheduleId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -60,6 +61,12 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<JobLog>(b =>
         {
             b.HasOne(e => e.JobRun).WithMany(r => r.Logs).HasForeignKey(e => e.JobRunId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExecutableParameter>(b =>
+        {
+            b.HasKey(e => e.Id);
+            b.HasOne(e => e.Version).WithMany(x => x.Parameters).HasForeignKey(e => e.ExecutableVersionId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

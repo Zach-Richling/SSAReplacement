@@ -1,0 +1,176 @@
+﻿@page "/executables/{Id:int}"
+@using BlazorBlueprint.Primitives.DataGrid
+@using System.Net
+@using SSAReplacement.Wasm.Pages.Executables.Modals
+
+<PageTitle>Executable Detail</PageTitle>
+
+@if (_error is not null)
+{
+    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
+} 
+else if (_loading)
+{
+    <BbAlert Variant="AlertVariant.Default" Class="mt-4">Loading...</BbAlert>
+} 
+else
+{
+    <div class="grid grid-cols-2 gap-3">
+        <BbCard>
+            <BbCardHeader>Executable Details</BbCardHeader>
+            <BbCardContent>
+                <div class="grid grid-cols-2 gap-1">
+                    <div class="font-medium">Name</div>
+                    <div>@_executable.Name</div>
+
+                    <div class="font-medium">Active Version</div>
+                    <div>@(_activeVersion?.Version ?? "-")</div>
+
+                    <div class="font-medium">Created</div>
+                    <div>@_executable.CreatedAt.ToTimeAgo()</div>
+                </div>
+            </BbCardContent>
+        </BbCard>
+        <BbCard>
+            <BbCardHeader>
+                <div class="flex flex-row justify-between items-center">
+                    <h1 class="text-lg font-semibold m-0">Versions</h1>
+                    <AddExecutableVersionModal OnExecutableVersionCreated="LoadData" Executable="_executable" />
+                </div>
+            </BbCardHeader>
+            <BbCardContent>
+                <BbDataTable Data="_executable.Versions" TData="ExecutableVersion" ShowToolbar="false">
+                    <Columns>
+                        <BbDataTableColumn Header="Version" TData="ExecutableVersion" TValue="string" Property="x => x.Version"/>
+                        <BbDataTableColumn Header="Entry Point DLL" TData="ExecutableVersion" TValue="string" Property="x => x.EntryPointDll" />
+                        <BbDataTableColumn Header="Uploaded At" TData="ExecutableVersion" TValue="DateTime" Property="x => x.UploadedAt">
+                            <CellTemplate Context="version">
+                                @version.UploadedAt.ToTimeAgo()
+                            </CellTemplate>
+                        </BbDataTableColumn>
+                        <BbDataTableColumn Header="Actions" TData="ExecutableVersion" TValue="string">
+                            <CellTemplate Context="version">
+                                @if(!version.IsActive)
+                                {
+                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => SetActiveVersion(version.Id)" Disabled="_activatingVersion">Activate</BbButton>
+                                }
+                            </CellTemplate>
+                        </BbDataTableColumn>
+                    </Columns>
+                </BbDataTable>
+            </BbCardContent>
+        </BbCard>
+    </div>
+
+    <BbCard Class="mt-3">
+        <BbCardHeader>Parameters for active version (@_activeVersion?.Version)</BbCardHeader>
+        <BbCardContent>
+            <BbDataTable Data="_parameters" TData="ExecutableParameter" ShowToolbar="false">
+                <Columns>
+                    <BbDataTableColumn Header="Name" TData="ExecutableParameter" TValue="string" Property="x => x.Name"/>
+                    <BbDataTableColumn Header="Type" TData="ExecutableParameter" TValue="string" Property="x => x.TypeName"/>
+                    <BbDataTableColumn Header="Is Required" TData="ExecutableParameter" TValue="bool" Property="x => x.Required">
+                        <CellTemplate Context="param">
+                            <BbBadge Variant="@(param.Required? BadgeVariant.Default: BadgeVariant.Destructive)">@((param.Required ? "Yes" : "No"))</BbBadge>
+                        </CellTemplate>
+                    </BbDataTableColumn>
+                    <BbDataTableColumn Header="Default Value" TData="ExecutableParameter" TValue="string" Property="x => x.DefaultValue">
+                        <CellTemplate Context="param">
+                            @(param.DefaultValue ?? "-")
+                        </CellTemplate>
+                    </BbDataTableColumn>
+                </Columns>
+            </BbDataTable>
+        </BbCardContent>
+    </BbCard>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    [Inject]
+    public required SsaApiClient Api { get; set; }
+
+    [Inject]
+    public required NavigationManager Nav { get; set; }
+
+    [Inject]
+    public required BreadcrumbService Breadcrumbs { get; set; }
+
+    private SSAReplacement.Wasm.Client.Executables.ExecutableDetail _executable = null!;
+    private List<ExecutableParameter> _parameters = [];
+
+    private bool _loading = true;
+    private bool _activatingVersion = false;
+    private string? _error;
+
+    private ExecutableVersion? _activeVersion =>
+        _executable.Versions.FirstOrDefault(v => v.IsActive);
+
+    protected override async Task OnInitializedAsync() 
+    {
+        await LoadData();
+
+        Breadcrumbs.Set(
+            new BreadcrumbItem() { Text = "Executables", Url = "/executables" },
+            new BreadcrumbItem() { Text = $"{_executable?.Name ?? "Not Found"}" }
+        );
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+
+        try
+        {
+            var executable = await Api.GetExecutableAsync(Id);
+
+            if (executable is null)
+            {
+                _error = "Executable not found.";
+                return;
+            }
+
+            _executable = executable;
+            if (_activeVersion is not null)
+            {
+                try
+                {
+                    _parameters = await Api.GetExecutableVersionParametersAsync(_executable.Id, _activeVersion.Id);
+                } 
+                catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
+                {
+                    //Ignore 404
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "Failed to load: " + ex.ToString();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SetActiveVersion(int versionId)
+    {
+        _activatingVersion = true;
+
+        try
+        {
+            await Api.ActivateExecutableVersionAsync(Id, versionId);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _activatingVersion = false;
+        }
+    }
+}

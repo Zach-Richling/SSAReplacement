@@ -1,0 +1,21 @@
+﻿<BbInputGroup>
+    <BbInputGroupInput Value="@Value" ValueChanged="@ValueChanged" Placeholder="@Placeholder" AriaLabel="@AriaLabel" />
+    <BbInputGroupAddon Align="InputGroupAlign.InlineEnd">
+        <LucideIcon Name="search" aria-hidden="true" Size="15" />
+    </BbInputGroupAddon>
+</BbInputGroup>
+
+@code {
+
+    [Parameter]
+    public string Value { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Filter by name…";
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "";
+}

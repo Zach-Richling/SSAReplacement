@@ -1,0 +1,92 @@
+﻿@using System.ComponentModel.DataAnnotations
+@inject SsaApiClient Api
+
+<BbDialog @bind-Open="IsOpen">
+    <BbDialogTrigger>
+        <BbButton>Add Schedule</BbButton>
+    </BbDialogTrigger>
+    <BbDialogContent>
+        <BbDialogHeader>
+            <BbDialogTitle>Add a schedule to the job</BbDialogTitle>
+        </BbDialogHeader>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <BbAlert Variant="AlertVariant.Danger">@_error</BbAlert>
+        }
+        <EditForm Model="_formState" id="add-job-schedule-form" OnValidSubmit="SubmitAddJobSchedule">
+            <DataAnnotationsValidator />
+            <BbField Orientation="FieldOrientation.Responsive">
+                <BbFieldLabel For="schedule">Schedule</BbFieldLabel>
+                <BbCombobox TValue="int" Options="_selectOptions" @bind-Value="_formState.ScheduleId" />
+                <ValidationMessage For="() => _formState.ScheduleId" />
+            </BbField>
+        </EditForm>
+        <BbDialogFooter>
+            <BbButton Type="ButtonType.Submit" form="add-job-schedule-form">Add</BbButton>
+        </BbDialogFooter>
+    </BbDialogContent>
+</BbDialog>
+
+@code {
+    [Parameter]
+    public EventCallback OnScheduleCreated { get; set; }
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public required JobDetail Job { get; set; }
+
+    private AddJobScheduleFormState _formState = new();
+    private List<Schedule> _allSchedules = [];
+    private List<SelectOption<int>> _selectOptions => _allSchedules
+        .Except(Job.Schedules)
+        .Select(s => new SelectOption<int>(s.Id, s.Name))
+        .ToList();
+
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _allSchedules = await Api.GetSchedulesAsync();
+        } 
+        catch (Exception)
+        {
+            _error = $"Could not load schedule dropdown";
+        }
+    }
+
+    private async Task SubmitAddJobSchedule()
+    {
+        _error = null;
+
+        Console.WriteLine("Got here");
+
+        try
+        {
+            var newSchedules = Job.Schedules.Select(s => s.Id).ToList();
+            newSchedules.Add(_formState.ScheduleId);
+
+            await Api.SetJobSchedulesAsync(Job.Id, newSchedules);
+
+            if (OnScheduleCreated.HasDelegate)
+            {
+                await OnScheduleCreated.InvokeAsync();
+            }
+
+            IsOpen = false;
+        }
+        catch (Exception ex)
+        {
+            _error = "Error when adding schedule: " + ex.Message;
+        }
+    }
+
+    private class AddJobScheduleFormState
+    {
+        [Range(1, double.MaxValue, ErrorMessage = "Please select a schedule.")]
+        public int ScheduleId { get; set; }
+    }
+}

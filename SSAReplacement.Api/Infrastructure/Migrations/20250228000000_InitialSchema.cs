@@ -64,6 +64,15 @@ public sealed class InitialSchema : Migration
             .WithColumn("JobRunId").AsInt32().NotNullable()
             .WithColumn("LogType").AsString(16).NotNullable()
             .WithColumn("Content").AsString().NotNullable();
+
+        Create.Table("ExecutableParameter")
+            .WithColumn("Id").AsInt32().PrimaryKey().Identity()
+            .WithColumn("ExecutableVersionId").AsInt32().NotNullable()
+            .WithColumn("Name").AsString(256).NotNullable()
+            .WithColumn("TypeName").AsString(256).NotNullable()
+            .WithColumn("Description").AsString(1024).Nullable()
+            .WithColumn("Required").AsBoolean().NotNullable()
+            .WithColumn("DefaultValue").AsString(4096).Nullable();
     }
 
     public override void Down()

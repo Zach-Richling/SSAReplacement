@@ -5,12 +5,21 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BlazorBlueprint.Components" Version="3.3.0" />
+    <Compile Remove="Tailwind\**" />
+    <Content Remove="Tailwind\**" />
+    <EmbeddedResource Remove="Tailwind\**" />
+    <None Remove="Tailwind\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BlazorBlueprint.Components" Version="3.4.0" />
     <PackageReference Include="CronExpressionDescriptor" Version="2.45.0" />
     <PackageReference Include="Cronos" Version="0.11.1" />
+    <PackageReference Include="Humanizer.Core" Version="3.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.3" PrivateAssets="all" />
   </ItemGroup>

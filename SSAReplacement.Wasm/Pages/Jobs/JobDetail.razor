@@ -1,0 +1,198 @@
+﻿@page "/jobs/{Id:int}"
+@using Humanizer
+@using SSAReplacement.Wasm.Pages.Jobs.Modals
+
+@inject SsaApiClient Api
+@inject NavigationManager Nav
+@inject BreadcrumbService Breadcrumbs
+@inject ToastService Toasts
+
+<PageTitle>Job Detail</PageTitle>
+
+@if (_loading)
+{
+    <BbAlert Variant="AlertVariant.Info" Class="mt-4">Loading…</BbAlert>
+} 
+else if (_hasError)
+{
+    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
+} 
+else
+{
+    <div class="flex flex-row justify-between items-center">
+        <h1 class="text-lg font-semibold m-0">@_job.Name</h1>
+        <BbButton OnClick="TriggerJobRun">Trigger Job</BbButton>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-3">
+        <BbCard>
+            <BbCardHeader>Job Details</BbCardHeader>
+            <BbCardContent>
+                <div class="grid grid-cols-2 gap-1">
+                    <div class="font-medium">Name</div>
+                    <div>@_job.Name</div>
+
+                    <div class="font-medium">Executable</div>
+                    <div>@_job.ExecutableName</div>
+
+                    <div class="font-medium">Created At</div>
+                    <div>@_job.CreatedAt.ToTimeAgo()</div>
+
+                    <div class="font-medium">Enabled</div>
+                    <div><BbBadge Variant="@(_job.IsEnabled? BadgeVariant.Default: BadgeVariant.Secondary)">@(_job.IsEnabled ? "Enabled" : "Disabled")</BbBadge></div>
+                </div>
+            </BbCardContent>
+        </BbCard>
+        <BbCard>
+            <BbCardHeader Class="flex flex-row justify-between items-center">
+                Schedules
+                <AddScheduleModal Job="_job" OnScheduleCreated="LoadData" />
+            </BbCardHeader>
+            <BbCardContent>
+                <BbDataTable Data="_job.Schedules" TData="Schedule" ShowToolbar="false">
+                    <Columns>
+                        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.Name)" Header="Schedule Name"></BbDataTableColumn>
+                        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CronExpression)" Header="Frequency">
+                            <CellTemplate Context="schedule">
+                                @CronHelper.GetDescription(schedule.CronExpression)
+                            </CellTemplate>
+                        </BbDataTableColumn>
+                        <BbDataTableColumn TData="Schedule" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created">
+                            <CellTemplate Context="schedule">
+                                @schedule.CreatedAt.ToTimeAgo()
+                            </CellTemplate>
+                        </BbDataTableColumn>
+                        <BbDataTableColumn TData="Schedule" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Enabled">
+                            <CellTemplate Context="schedule">
+                                <BbBadge Variant="@(schedule.IsEnabled? BadgeVariant.Default: BadgeVariant.Secondary)">@(schedule.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
+                            </CellTemplate>
+                        </BbDataTableColumn>
+                        <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions">
+                            <CellTemplate Context="schedule">
+                                <BbButton Variant="ButtonVariant.Destructive" Size="ButtonSize.Small" OnClick="() => RemoveJobSchedule(schedule.Id)">Remove</BbButton>
+                            </CellTemplate>
+                        </BbDataTableColumn>
+                    </Columns>
+                </BbDataTable>
+            </BbCardContent>
+        </BbCard>
+    </div>
+    <BbAccordion Class="mt-3">
+        <BbCard>
+            <BbCardContent>
+                <BbAccordionItem Value="job-runs">
+                    <BbAccordionTrigger>Job Runs</BbAccordionTrigger>
+                    <BbAccordionContent>
+                        <BbDataTable Data="_runs" TData="JobRun" ShowToolbar="false">
+                            <Columns>
+                                <BbDataTableColumn TData="JobRun" TValue="string" Property="x => x.Trigger" Header="Trigger" />
+                                <BbDataTableColumn TData="JobRun" TValue="DateTime" Property="x => x.StartedAt" Header="Started At">
+                                    <CellTemplate Context="run">
+                                        @run.StartedAt.ToLocalTime()
+                                    </CellTemplate>
+                                </BbDataTableColumn>
+                                <BbDataTableColumn TData="JobRun" TValue="DateTime?" Property="x => x.FinishedAt" Header="Duration">
+                                    <CellTemplate Context="run">
+                                        @(run.FinishedAt.HasValue ? (run.FinishedAt.Value - run.StartedAt).Humanize() : "-")
+                                    </CellTemplate>
+                                </BbDataTableColumn>
+                                <BbDataTableColumn TData="JobRun" TValue="string" Property="x => x.Status" Header="Status">
+                                    <CellTemplate Context="run">
+                                        <BbBadge Variant="@(run.Status == "Failed" ? BadgeVariant.Destructive : BadgeVariant.Default)">@run.Status</BbBadge>
+                                    </CellTemplate>
+                                </BbDataTableColumn>
+                                <BbDataTableColumn TData="JobRun" TValue="string" Header="Actions">
+                                    <CellTemplate Context="run">
+                                        <BbButton Size="ButtonSize.Small" Variant="ButtonVariant.Outline" OnClick="() => NavigateToRunDetail(run.Id)">View Details</BbButton>
+                                    </CellTemplate>
+                                </BbDataTableColumn>
+                            </Columns>
+                        </BbDataTable>
+                    </BbAccordionContent>
+                </BbAccordionItem>
+            </BbCardContent>
+        </BbCard>
+    </BbAccordion>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private SSAReplacement.Wasm.Client.Jobs.JobDetail _job = null!;
+    private List<JobRun> _runs = [];
+
+    private bool _loading = true;
+    private string? _error;
+    private bool _hasError => !string.IsNullOrEmpty(_error);
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    protected override void OnParametersSet()
+    {
+        Breadcrumbs.Set(
+            new BreadcrumbItem() { Text = "Jobs", Url = "/jobs" },
+            new BreadcrumbItem() { Text = "Job Detail" }
+        );
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var jobTask = Api.GetJobAsync(Id);
+            var runTask = Api.GetJobRunsAsync(Id);
+
+            var job = await jobTask;
+            if (job is null)
+            {
+                _error = "Job not found.";
+                return;
+            }
+
+            _job = job;
+            _runs = await runTask;
+        }
+        catch (Exception e)
+        {
+            _error = $"Error loading job: {e.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task TriggerJobRun()
+    {
+        try
+        {
+            await Api.TriggerJobAsync(Id);
+            Toasts.Success("Job triggered successfully");
+            await LoadData();
+        } 
+        catch (Exception) 
+        {
+            Toasts.Error("An error occurred while triggering the job");
+        }
+    }
+
+    private async Task RemoveJobSchedule(int jobScheduleId)
+    {
+        try
+        {
+            _job.Schedules.RemoveAll(s => s.Id == jobScheduleId);
+            await Api.SetJobSchedulesAsync(_job.Id, _job.Schedules.Select(x => x.Id));
+            Toasts.Success("Job schedule removed successfully");
+        } 
+        catch (Exception) 
+        {
+            Toasts.Error("An error occurred while remove the job schedule");
+        }
+    }
+
+    private void NavigateToRunDetail(int runId)
+    {
+        Nav.NavigateTo($"/jobs/{Id}/runs/{runId}");
+    }
+}

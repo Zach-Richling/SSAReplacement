@@ -8,6 +8,11 @@ using SSAReplacement.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var executablePath = builder.Configuration["Executables:Path"]
+    ?? throw new Exception("Please defined Executables:Path environment variable.");
+
+Directory.CreateDirectory(executablePath);
+
 // DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -39,7 +44,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5011", "https://localhost:7171")
+        policy.AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader();
     });

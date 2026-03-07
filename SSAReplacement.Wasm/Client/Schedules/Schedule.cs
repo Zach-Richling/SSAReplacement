@@ -5,7 +5,7 @@ namespace SSAReplacement.Wasm.Client.Schedules;
 /// </summary>
 public record Schedule(
     int Id,
-    string? Name,
+    string Name,
     string CronExpression,
     bool IsEnabled,
     DateTime CreatedAt);

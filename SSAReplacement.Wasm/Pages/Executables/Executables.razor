@@ -1,0 +1,95 @@
+@page "/executables"
+@using SSAReplacement.Wasm.Pages.Executables.Modals
+
+@inject SsaApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Executables</PageTitle>
+
+<div class="flex flex-row justify-between items-center">
+    <h1 class="text-lg font-semibold m-0">Executables</h1>
+    <div class="flex items-center flex-1" style="max-width: 20rem;">
+        <SearchBar @bind-Value="_searchQuery" AriaLabel="Filter executables by name" />
+    </div>
+    <AddExecutableModal OnExecutableCreated="LoadData" />
+</div>
+
+@if (_error is not null)
+{
+    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
+}
+
+<BbDataTable Data="_filteredExecutables" TData="Executable" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
+    <Columns>
+        <BbDataTableColumn TData="Executable" TValue="string" Property="@(x => x.Name)" Header="Executable" Sortable />
+        <BbDataTableColumn TData="Executable" TValue="string" Property="@(x => x.ActiveVersion)" Header="Active Version" Sortable>
+            <CellTemplate Context="executable">
+                <BbBadge Variant="@(string.IsNullOrEmpty(executable.ActiveVersion) ? BadgeVariant.Destructive : BadgeVariant.Default)">@(executable.ActiveVersion ?? "-")</BbBadge>
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="Executable" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created" Sortable>
+            <CellTemplate Context="executable">
+                @executable.CreatedAt.ToTimeAgo()
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="Executable" TValue="string" Header="Actions">
+            <CellTemplate Context="executable">
+                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToExecutable(executable.Id)">View</BbButton>
+            </CellTemplate>
+        </BbDataTableColumn>
+    </Columns>
+    <EmptyTemplate>
+        <tr class="flex flex-row justify-center">
+            <td colspan="4" class="p-4 text-center text-muted">No executables found.</td>
+        </tr>
+    </EmptyTemplate>
+</BbDataTable>
+
+@code {
+    [Inject]
+    public required NavigationManager NavigationManager { get; set; }
+
+    [Inject]
+    public required BreadcrumbService Breadcrumbs { get; set; }
+
+    private List<Executable> _executables = [];
+    private string _searchQuery = "";
+
+    private bool _loading = true;
+    private string? _error;
+
+    private IEnumerable<Executable> _filteredExecutables =>
+        string.IsNullOrWhiteSpace(_searchQuery)
+            ? _executables
+            : _executables.Where(e => (e.Name ?? "").Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() 
+    {
+        Breadcrumbs.Set(new BreadcrumbItem() { Text = "Executables" });
+        await LoadData(); 
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _executables = await Api.GetExecutablesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = "Failed to load: " + ex.Message;
+            _executables = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void NavigateToExecutable(int id)
+    {
+        Nav.NavigateTo($"/executables/{id}");
+    }
+}

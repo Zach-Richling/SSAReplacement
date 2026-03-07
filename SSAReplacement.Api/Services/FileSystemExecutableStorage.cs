@@ -8,18 +8,9 @@ public interface IExecutableStorage
     Task<string> SaveVersionAsync(int executableId, int versionId, Stream zipStream, CancellationToken cancellationToken = default);
 }
 
-public sealed class FileSystemExecutableStorage : IExecutableStorage
+public sealed class FileSystemExecutableStorage(IConfiguration configuration, ILogger<FileSystemExecutableStorage> logger) : IExecutableStorage
 {
-    private readonly string _rootPath;
-    private readonly ILogger<FileSystemExecutableStorage> _logger;
-
-    public FileSystemExecutableStorage(IConfiguration configuration, ILogger<FileSystemExecutableStorage> logger)
-    {
-        _rootPath = configuration["JobBinaries:Path"] ?? throw new Exception("Please define JobBinaries:Path environment variable.");
-        _logger = logger;
-
-        Directory.CreateDirectory(_rootPath);
-    }
+    private readonly string _rootPath = configuration["Executables:Path"]!;
 
     public string GetVersionDirectory(int executableId, int versionId)
     {
@@ -38,7 +29,14 @@ public sealed class FileSystemExecutableStorage : IExecutableStorage
                 await zipStream.CopyToAsync(fs, cancellationToken);
 
             ZipFile.ExtractToDirectory(tempZip, versionDir, overwriteFiles: true);
-            _logger.LogInformation("Extracted executable binary for Executable {ExecutableId} Version {VersionId} to {Path}", executableId, versionId, versionDir);
+            logger.LogInformation("Extracted executable binary for Executable {ExecutableId} Version {VersionId} to {Path}", executableId, versionId, versionDir);
+
+            var devAppSettingsPath = Path.Combine(versionDir, "appsettings.Development.json");
+            if (File.Exists(devAppSettingsPath))
+            {
+                logger.LogInformation("Removing appsettings.Development.json");
+                File.Delete(devAppSettingsPath);
+            }
 
             return versionDir;
         }
