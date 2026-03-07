@@ -105,15 +105,15 @@
 
             memoryStream.Seek(0, SeekOrigin.Begin);
 
-            var executable = await Api.CreateExecutableAsync(new CreateExecutableRequest(_formState.Name));
+            var executable = await Api.Executable.CreateExecutableAsync(new CreateExecutableRequest(_formState.Name));
             executableId = executable.Id;
 
             //Grabbing a new stream so the old one can be disposed to minimize memory usage
             await using var fileStream = selectedFile.File.OpenReadStream(MaxAllowedFileSize);
-            var version = await Api.UploadExecutableVersionAsync(executable.Id, fileStream, selectedFile.Name, _formState.EntryPointDll);
+            var version = await Api.Executable.UploadExecutableVersionAsync(executable.Id, fileStream, selectedFile.Name, _formState.EntryPointDll);
             executableVersionId = version.Id;
             
-            await Api.ActivateExecutableVersionAsync(executable.Id, version.Id);
+            await Api.Executable.ActivateExecutableVersionAsync(executable.Id, version.Id);
 
             if (OnExecutableCreated.HasDelegate)
             {

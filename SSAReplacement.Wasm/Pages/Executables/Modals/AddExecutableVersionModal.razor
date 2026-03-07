@@ -103,7 +103,7 @@
 
             //Grabbing a new stream so the old one can be disposed to minimize memory usage
             await using var fileStream = selectedFile.File.OpenReadStream(MaxAllowedFileSize);
-            var version = await Api.UploadExecutableVersionAsync(Executable.Id, fileStream, selectedFile.Name, _formState.EntryPointDll);
+            var version = await Api.Executable.UploadExecutableVersionAsync(Executable.Id, fileStream, selectedFile.Name, _formState.EntryPointDll);
             executableVersionId = version.Id;
 
             if (OnExecutableVersionCreated.HasDelegate)

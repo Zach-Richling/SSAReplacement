@@ -140,8 +140,8 @@ else
     {
         try
         {
-            var jobTask = Api.GetJobAsync(Id);
-            var runTask = Api.GetJobRunsAsync(Id);
+            var jobTask = Api.Job.GetJobAsync(Id);
+            var runTask = Api.Job.GetJobRunsAsync(Id);
 
             var job = await jobTask;
             if (job is null)
@@ -167,7 +167,7 @@ else
     {
         try
         {
-            await Api.TriggerJobAsync(Id);
+            await Api.Job.TriggerJobAsync(Id);
             Toasts.Success("Job triggered successfully");
             await LoadData();
         } 
@@ -182,7 +182,7 @@ else
         try
         {
             _job.Schedules.RemoveAll(s => s.Id == jobScheduleId);
-            await Api.SetJobSchedulesAsync(_job.Id, _job.Schedules.Select(x => x.Id));
+            await Api.Job.SetJobSchedulesAsync(_job.Id, _job.Schedules.Select(x => x.Id));
             Toasts.Success("Job schedule removed successfully");
         } 
         catch (Exception) 

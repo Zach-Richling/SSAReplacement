@@ -65,7 +65,7 @@
 
         try
         {
-            _schedules = await Api.GetSchedulesAsync();
+            _schedules = await Api.Schedule.GetSchedulesAsync();
         }
         catch (Exception ex)
         {

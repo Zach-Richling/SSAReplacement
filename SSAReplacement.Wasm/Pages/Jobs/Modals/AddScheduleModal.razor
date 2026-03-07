@@ -50,11 +50,11 @@
     {
         try
         {
-            _allSchedules = await Api.GetSchedulesAsync();
+            _allSchedules = await Api.Schedule.GetSchedulesAsync();
         } 
         catch (Exception)
         {
-            _error = $"Could not load schedule dropdown";
+            _error = $"Could not load schedule dropdown.";
         }
     }
 
@@ -62,14 +62,12 @@
     {
         _error = null;
 
-        Console.WriteLine("Got here");
-
         try
         {
             var newSchedules = Job.Schedules.Select(s => s.Id).ToList();
             newSchedules.Add(_formState.ScheduleId);
 
-            await Api.SetJobSchedulesAsync(Job.Id, newSchedules);
+            await Api.Job.SetJobSchedulesAsync(Job.Id, newSchedules);
 
             if (OnScheduleCreated.HasDelegate)
             {

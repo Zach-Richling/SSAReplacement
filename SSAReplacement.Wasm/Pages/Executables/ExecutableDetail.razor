@@ -124,7 +124,7 @@ else
 
         try
         {
-            var executable = await Api.GetExecutableAsync(Id);
+            var executable = await Api.Executable.GetExecutableAsync(Id);
 
             if (executable is null)
             {
@@ -137,7 +137,7 @@ else
             {
                 try
                 {
-                    _parameters = await Api.GetExecutableVersionParametersAsync(_executable.Id, _activeVersion.Id);
+                    _parameters = await Api.Executable.GetExecutableVersionParametersAsync(_executable.Id, _activeVersion.Id);
                 } 
                 catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
                 {
@@ -161,7 +161,7 @@ else
 
         try
         {
-            await Api.ActivateExecutableVersionAsync(Id, versionId);
+            await Api.Executable.ActivateExecutableVersionAsync(Id, versionId);
             await LoadData();
         }
         catch (Exception ex)

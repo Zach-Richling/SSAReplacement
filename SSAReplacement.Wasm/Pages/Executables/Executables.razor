@@ -73,9 +73,10 @@
     {
         _loading = true;
         _error = null;
+
         try
         {
-            _executables = await Api.GetExecutablesAsync();
+            _executables = await Api.Executable.GetExecutablesAsync();
         }
         catch (Exception ex)
         {

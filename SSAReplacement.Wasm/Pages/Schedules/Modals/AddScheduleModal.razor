@@ -78,7 +78,7 @@
                 return;
             }
 
-            await Api.AddScheduleAsync(new CreateScheduleRequest(
+            await Api.Schedule.AddScheduleAsync(new CreateScheduleRequest(
                 _formState.Name,
                 _formState.CronExpression));
 
