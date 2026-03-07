@@ -45,20 +45,25 @@ public static class ScheduleEndpoints
 
         group.MapPut("/{id:int}", async (int id, UpdateScheduleRequest req, AppDbContext db, IScheduleHangfireSyncService sync) =>
         {
-            if (req.CronExpression is { } cron)
+            if (!string.IsNullOrEmpty(req.CronExpression))
             {
-                var cronError = ValidateCronExpression(cron);
+                var cronError = ValidateCronExpression(req.CronExpression);
                 if (cronError is not null)
                     return Results.BadRequest(cronError);
             }
 
             var s = await db.Schedules.FindAsync(id);
-            if (s is null) return Results.NotFound();
-            if (req.Name is not null) s.Name = req.Name;
+
+            if (s is null)
+                return Results.NotFound();
+
+            if (!string.IsNullOrWhiteSpace(req.Name)) s.Name = req.Name;
             if (req.CronExpression is not null) s.CronExpression = req.CronExpression;
-            if (req.IsEnabled is { } en) s.IsEnabled = en;
+            if (req.IsEnabled is bool enabled) s.IsEnabled = enabled;
+
             await db.SaveChangesAsync();
             await sync.AddOrUpdateScheduleAsync(s.Id, s.CronExpression, s.IsEnabled);
+
             return Results.Ok(ScheduleDto.From(s));
         });
 
@@ -97,6 +102,6 @@ public static class ScheduleEndpoints
         }
     }
 
-    public record CreateScheduleRequest(string? Name, string CronExpression, bool IsEnabled = true);
+    public record CreateScheduleRequest(string Name, string CronExpression, bool IsEnabled = true);
     public record UpdateScheduleRequest(string? Name, string? CronExpression, bool? IsEnabled);
 }

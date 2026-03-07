@@ -9,14 +9,14 @@ public sealed class InitialSchema : Migration
     {
         Create.Table("Schedule")
             .WithColumn("Id").AsInt32().PrimaryKey().Identity()
-            .WithColumn("Name").AsString(256).Nullable()
+            .WithColumn("Name").AsString(256).NotNullable()
             .WithColumn("CronExpression").AsString(256).NotNullable()
             .WithColumn("IsEnabled").AsBoolean().NotNullable()
             .WithColumn("CreatedAt").AsDateTime2().NotNullable();
 
         Create.Table("Executable")
             .WithColumn("Id").AsInt32().PrimaryKey().Identity()
-            .WithColumn("Name").AsString(256).Nullable()
+            .WithColumn("Name").AsString(256).NotNullable()
             .WithColumn("CreatedAt").AsDateTime2().NotNullable();
 
         Create.Table("Job")

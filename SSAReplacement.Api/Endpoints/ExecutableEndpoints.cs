@@ -75,6 +75,6 @@ public static class ExecutableEndpoints
         });
     }
 
-    public record CreateExecutableRequest(string? Name);
-    public record UpdateExecutableRequest(string? Name);
+    public record CreateExecutableRequest(string Name);
+    public record UpdateExecutableRequest(string Name);
 }

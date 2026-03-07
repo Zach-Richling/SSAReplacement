@@ -26,7 +26,7 @@ public static class ExecutableVersionEndpoints
                 .OrderByDescending(v => v.UploadedAt)
                 .ToListAsync();
 
-            return Results.Ok(list.Select(v => ExecutableVersionDto.From(v, includePath: false)));
+            return Results.Ok(list.Select(v => ExecutableVersionDto.From(v)));
         });
 
         group.MapGet("/{versionId:int}/parameters", async (int executableId, int versionId, AppDbContext db) =>

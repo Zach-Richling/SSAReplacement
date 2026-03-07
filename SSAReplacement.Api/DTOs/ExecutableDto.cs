@@ -2,11 +2,11 @@ using SSAReplacement.Api.Domain;
 
 namespace SSAReplacement.Api.DTOs;
 
-public record ExecutableDto(int Id, string? Name, DateTime CreatedAt, string? ActiveVersion)
+public record ExecutableDto(int Id, string Name, DateTime CreatedAt, int ActiveVersion)
 {
     public static ExecutableDto From(Executable e) => new(
         e.Id, e.Name, e.CreatedAt,
-        e.Versions?.FirstOrDefault(v => v.IsActive)?.Version);
+        e.Versions.First(v => v.IsActive).Version);
 }
 
 public record ExecutableDetailDto(int Id, string? Name, DateTime CreatedAt, IReadOnlyList<ExecutableVersionDto> Versions)
