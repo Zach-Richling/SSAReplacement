@@ -1,0 +1,101 @@
+@page "/jobs/{JobId:int}/runs/{Id:int}"
+
+@inject SsaApiClient Api
+@inject BreadcrumbService Breadcrumbs
+
+<PageTitle>Job Run Detail</PageTitle>
+
+@if (_loading)
+{
+    <BbAlert Variant="AlertVariant.Info" Class="mt-4">Loading…</BbAlert>
+}
+else if (_hasError)
+{
+    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
+}
+else
+{
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>Job Logs</BbCardTitle>
+            <BbCardDescription>Logs are streamed from running jobs</BbCardDescription>
+            <BbSeparator />
+        </BbCardHeader>
+        <BbCardContent>
+            <BbScrollArea MaxHeight="200px">
+                @if (LogsDescendingByDate.Count == 0)
+                {
+                    <div class="text-secondary">No log entries.</div>
+                }
+                else
+                {
+                    <div class="font-mono text-sm overflow-x-auto">
+                        @foreach (var log in LogsDescendingByDate)
+                        {
+                            var logLevel = LogLevelFromLogType(log.LogType);
+                            var logDateStr = log.LogDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+                            <div class="whitespace-pre-wrap break-all">
+                                <span>[</span><span>@logDateStr</span><span class="@(logLevel == "ERROR" ? "text-destructive" : "text-primary")">@(" " + logLevel)</span><span>] </span>
+                                <span class="whitespace-pre-wrap">@log.Content</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </BbScrollArea>
+        </BbCardContent>
+    </BbCard>
+}
+
+@code {
+    [Parameter]
+    public int JobId { get; set; }
+
+    [Parameter]
+    public int Id { get; set; }
+
+    public JobRun JobRun { get; set; } = null!;
+    public List<JobLog> JobLogs { get; set; } = [];
+
+    private string? _error;
+    private bool _loading = true;
+    private bool _hasError => !string.IsNullOrEmpty(_error);
+
+    private IReadOnlyList<JobLog> LogsDescendingByDate => JobLogs.OrderBy(l => l.LogDate).ToList();
+
+    private static string LogLevelFromLogType(string logType) => logType == "StdOut" ? "INFO" : "ERROR";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var jobRun = await Api.Job.GetJobRunAsync(Id);
+            if (jobRun is null)
+            {
+                _error = "Job run not found.";
+                _loading = false;
+                return;
+            }
+
+            JobRun = jobRun;
+            JobLogs = await Api.Job.GetJobLogsAsync(Id);
+        }
+        catch (Exception e)
+        {
+            _error = $"Error loading job run: {e.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        Breadcrumbs.Set(
+           new BreadcrumbItem() { Text = "Jobs", Url = "/jobs" },
+           new BreadcrumbItem() { Text = "Job Detail", Url = $"/jobs/{JobId}" },
+           new BreadcrumbItem() { Text = "Job Run Detail" }
+       );
+    }
+}
