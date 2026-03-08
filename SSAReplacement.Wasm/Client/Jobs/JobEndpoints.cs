@@ -1,4 +1,4 @@
-﻿using SSAReplacement.Wasm.Client.Schedules;
+using SSAReplacement.Wasm.Client.Schedules;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -78,6 +78,16 @@ public class JobEndpoints(HttpClient http)
     {
         var list = await http.GetFromJsonAsync<List<JobLog>>($"runs/{jobRunId}/logs", cancellationToken);
         return list ?? [];
+    }
+
+    /// <summary>
+    /// Returns the full URL for the job log SSE stream (GET /runs/{id}/logs/stream).
+    /// Resume is via Last-Event-ID header (EventSource sends it automatically on reconnect).
+    /// </summary>
+    public string GetJobLogStreamUrl(int jobRunId)
+    {
+        var baseUrl = http.BaseAddress?.ToString().TrimEnd('/') ?? "";
+        return $"{baseUrl}/runs/{jobRunId}/logs/stream";
     }
 
     /// <summary>
