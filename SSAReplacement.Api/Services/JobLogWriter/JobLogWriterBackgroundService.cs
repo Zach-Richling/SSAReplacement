@@ -10,7 +10,7 @@ public sealed class JobLogWriterBackgroundService(
     ILogger<JobLogWriterBackgroundService> logger) : BackgroundService
 {
     private const int BatchSize = 50;
-    private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -18,7 +18,6 @@ public sealed class JobLogWriterBackgroundService(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            batch.Clear();
             using var flushCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
             flushCts.CancelAfter(FlushInterval);
 
@@ -31,20 +30,13 @@ public sealed class JobLogWriterBackgroundService(
                         break;
                 }
             }
-            catch (OperationCanceledException)
-            {
-                if (stoppingToken.IsCancellationRequested)
-                    break;
-            }
+            catch (OperationCanceledException) { }
 
             if (batch.Count > 0)
+            {
                 await FlushBatchAsync(batch);
-        }
-
-        if (batch.Count > 0)
-        {
-            await FlushBatchAsync(batch);
-            batch.Clear();
+                batch.Clear();
+            }
         }
 
         while (queue.Reader.TryRead(out var remaining))
@@ -56,9 +48,6 @@ public sealed class JobLogWriterBackgroundService(
                 batch.Clear();
             }
         }
-
-        if (batch.Count > 0)
-            await FlushBatchAsync(batch);
     }
 
     private async Task FlushBatchAsync(List<JobLogEntry> batch)
