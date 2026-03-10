@@ -1,0 +1,174 @@
+@namespace BlazorBlueprint.Components
+
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+
+@typeparam TValue
+@implements IDisposable
+
+@if (ChildContent is not null)
+{
+    if (EffectiveRenderMode == EventRenderMode.Accumulate)
+    {
+        if (Virtualize)
+        {
+            <Virtualize Items="values" Context="item">
+                @ChildContent(item)
+            </Virtualize>
+        }
+        else
+        {
+            @foreach (var item in values)
+            {
+                @ChildContent(item)
+            }
+        }
+    }
+    else
+    {
+        if (currentValue is not null)
+        {
+            @ChildContent(currentValue)
+        }
+    }
+}
+
+@code {
+    private TValue? currentValue;
+    private bool disposed;
+    private bool renderPending;
+
+    private readonly HashSet<string> eventIds = new();
+    private readonly List<TValue> values = new();
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private EventRenderMode EffectiveRenderMode => RenderMode ?? Context.RenderMode;
+
+    /// <summary>
+    /// The SSE event type name to listen for.
+    /// Must match the <c>event:</c> field sent by the server.
+    /// </summary>
+    /// <remarks>
+    /// Do not use the event name of 'message' as this is reserved for the default message event and will not trigger this template.
+    /// </remarks>
+
+    [Parameter, EditorRequired]
+    public string Event { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Template that receives the deserialized <typeparamref name="TValue"/>
+    /// each time an event of the matching type arrives.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<TValue>? ChildContent { get; set; }
+
+    /// <summary>
+    /// Controls whether this template renders only the latest event
+    /// (<see cref="EventRenderMode.Latest"/>) or accumulates all events
+    /// (<see cref="EventRenderMode.Accumulate"/>).
+    /// This overwrites <see cref="BbEventConsumer.RenderMode"/> for this template.
+    /// </summary>
+    [Parameter]
+    public EventRenderMode? RenderMode { get; set; }
+
+    /// <summary>
+    /// EventCallback that is invoked whenever the component
+    /// renders a batch of events
+    /// </summary>
+    [Parameter]
+    public EventCallback<TValue> OnRender { get; set; }
+
+    /// <summary>
+    /// Option to virtualize the accumulated list of events.
+    /// This will improve rendering performance for large lists.
+    /// </summary>
+    /// <remarks>
+    /// This will only work with <see cref="EventRenderMode.Accumulate"/>
+    /// </remarks>
+    [Parameter]
+    public bool Virtualize { get; set; } = false;
+
+    [CascadingParameter]
+    private EventConsumerContext Context { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        if (Context == null)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(BbEventTemplate<TValue>)} must be used within a {nameof(BbEventConsumer)} component.");
+        }
+
+        Context.RegisterHandler(Event, HandleEvent);
+    }
+
+    private void HandleEvent(string eventId, string jsonData)
+    {
+        if (disposed) { return; }
+
+        try
+        {
+            var value = JsonSerializer.Deserialize<TValue>(jsonData, JsonOptions);
+
+            if (value is null)
+            {
+                return;
+            }
+
+            if (EffectiveRenderMode == EventRenderMode.Accumulate)
+            {
+                if (!eventIds.Contains(eventId))
+                {
+                    eventIds.Add(eventId);
+                    values.Add(value);
+
+                    ScheduleRender();
+                }
+            }
+            else
+            {
+                currentValue = value;
+                ScheduleRender();
+            }
+        }
+        catch (JsonException)
+        {
+            //Inform user of bad payload?
+        }
+    }
+
+    private void ScheduleRender()
+    {
+        if (renderPending || disposed)
+        {
+            return;
+        }
+
+        renderPending = true;
+
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Delay(1000);
+
+            renderPending = false;
+            if (!disposed)
+            {
+                StateHasChanged();
+                if (OnRender.HasDelegate)
+                {
+                    await OnRender.InvokeAsync();
+                }
+            }
+        });
+    }
+
+    public void Dispose()
+    {
+        disposed = true;
+        Context?.UnregisterHandler(Event);
+    }
+}

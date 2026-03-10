@@ -1,5 +1,4 @@
 @page "/jobs/{JobId:int}/runs/{Id:int}"
-@implements IAsyncDisposable
 
 @inject SsaApiClient Api
 @inject BreadcrumbService Breadcrumbs
@@ -20,31 +19,25 @@ else
     <BbCard>
         <BbCardHeader>
             <BbCardTitle>Job Logs</BbCardTitle>
-            <BbCardDescription>Logs are streamed from running jobs</BbCardDescription>
+            <BbCardDescription>Logs are streamed - @(_consumerRef?.ConnectionState ?? EventSourceState.Disconnected)</BbCardDescription>
             <BbSeparator />
         </BbCardHeader>
         <BbCardContent>
             <BbScrollArea MaxHeight="200px">
-                @if (LogsDescendingByDate.Count == 0)
-                {
-                    <div class="text-secondary">No log entries.</div>
-                }
-                else
-                {
-                    <div class="font-mono text-sm overflow-x-auto">
-                        @foreach (var log in LogsDescendingByDate)
-                        {
-                            var logLevel = LogLevelFromLogType(log.LogType);
-                            var logDateStr = log.LogDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
-
-                            <div class="whitespace-pre-wrap break-all">
-                                <span>[</span><span>@logDateStr</span><span class="@(logLevel == "ERROR" ? "text-destructive" : "text-primary")">@(" " + logLevel)</span><span>] </span>
-                                <span class="whitespace-pre-wrap">@log.Content</span>
-                            </div>
+                <BbEventConsumer Url="@Api.Job.GetJobLogStreamUrl(Id)" OnConnectionStateChanged="StateHasChanged" @ref="_consumerRef">
+                    <BbEventTemplate Event="job-log" TValue="JobLog" RenderMode="EventRenderMode.Accumulate" OnRender="() => _scrollToBottom = true">
+                        @{
+                            var logLevel = LogLevelFromLogType(context.LogType);
+                            var logDateStr = context.LogDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
                         }
-                        <div id="log-list-end"></div>
-                    </div>
-                }
+
+                        <div class="whitespace-pre-wrap break-all">
+                            <span>[</span><span>@logDateStr</span><span class="@(logLevel == "ERROR" ? "text-destructive" : "text-primary")">@(" " + logLevel)</span><span>] </span>
+                            <span class="whitespace-pre-wrap">@context.Content</span>
+                        </div>
+                    </BbEventTemplate>
+                </BbEventConsumer>
+                <div id="log-list-end"></div>
             </BbScrollArea>
         </BbCardContent>
     </BbCard>
@@ -58,17 +51,15 @@ else
     public int Id { get; set; }
 
     public JobRun JobRun { get; set; } = null!;
-    public List<JobLog> JobLogs { get; set; } = [];
 
     private string? _error;
     private bool _loading = true;
     private bool _hasError => !string.IsNullOrEmpty(_error);
-    private JobLogStreamHandle? _logStreamHandle;
     private bool _scrollToBottom;
 
-    private IReadOnlyList<JobLog> LogsDescendingByDate => JobLogs.OrderBy(l => l.LogDate).ToList();
-
     private static string LogLevelFromLogType(string logType) => logType == "StdOut" ? "INFO" : "ERROR";
+
+    private BbEventConsumer? _consumerRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -83,10 +74,6 @@ else
             }
 
             JobRun = jobRun;
-            JobLogs = await Api.Job.GetJobLogsAsync(Id);
-
-            if (JobRun.Status == "Running")
-                await StartLogStreamAsync();
         }
         catch (Exception e)
         {
@@ -112,6 +99,7 @@ else
         if (!firstRender && _scrollToBottom)
         {
             _scrollToBottom = false;
+
             try
             {
                 await JSRuntime.InvokeVoidAsync("scrollIntoViewById", "log-list-end");
@@ -120,63 +108,11 @@ else
         }
     }
 
-    private async Task StartLogStreamAsync()
+    private void TryScrollToBottom()
     {
-        try
-        {
-            var url = Api.Job.GetJobLogStreamUrl(Id);
-
-            _logStreamHandle = await JobLogStreamHandle.StartAsync(JSRuntime, url,
-                OnLog: async log =>
-                {
-                    await InvokeAsync(() =>
-                    {
-                        if (JobLogs.All(l => l.Id != log.Id))
-                            JobLogs.Add(log);
-
-                        _scrollToBottom = true;
-
-                        StateHasChanged();
-                    });
-                },
-                OnStreamEnd: async () =>
-                {
-                    await CloseStreamAsync();
-                    await ReloadJobRunAsync();
-                },
-                OnStreamError: (s) => _ = CloseStreamAsync());
-        }
-        catch (Exception)
-        {
-            _logStreamHandle = null;
-        }
-    }
-
-    private async Task CloseStreamAsync()
-    {
-        if (_logStreamHandle is null) 
+        if (_scrollToBottom)
             return;
 
-        try
-        {
-            await _logStreamHandle.DisposeAsync();
-        }
-        catch (ObjectDisposedException) { }
-        finally
-        {
-            _logStreamHandle = null;
-        }
+        _scrollToBottom = true;
     }
-
-    private async Task ReloadJobRunAsync()
-    {
-        var run = await Api.Job.GetJobRunAsync(Id);
-        if (run is not null)
-        {
-            JobRun = run;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    public async ValueTask DisposeAsync() => await CloseStreamAsync();
 }
