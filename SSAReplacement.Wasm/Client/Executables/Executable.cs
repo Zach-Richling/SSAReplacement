@@ -3,4 +3,10 @@ namespace SSAReplacement.Wasm.Client.Executables;
 /// <summary>
 /// Executable list item (matches API ExecutableDto from GET /executables).
 /// </summary>
-public record Executable(int Id, string Name, DateTime CreatedAt, int ActiveVersion);
+public class Executable
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+    public int ActiveVersion { get; set; }
+};

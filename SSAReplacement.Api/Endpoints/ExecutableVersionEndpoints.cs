@@ -30,12 +30,12 @@ public static class ExecutableVersionEndpoints
             return Results.Ok(list.Select(v => ExecutableVersionDto.From(v)));
         });
 
-        group.MapGet("/{versionId:int}/parameters", async (int executableId, int versionId, AppDbContext db) =>
+        group.MapGet("/{versionNumber:int}/parameters", async (int executableId, int versionNumber, AppDbContext db) =>
         {
             var version = await db.ExecutableVersions
                 .AsNoTracking()
                 .Include(v => v.Parameters)
-                .FirstOrDefaultAsync(v => v.ExecutableId == executableId && v.Id == versionId);
+                .FirstOrDefaultAsync(v => v.ExecutableId == executableId && v.Version == versionNumber);
 
             if (version is null)
                 return Results.NotFound();

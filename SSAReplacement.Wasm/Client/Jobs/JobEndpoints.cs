@@ -81,6 +81,24 @@ public class JobEndpoints(HttpClient http)
     }
 
     /// <summary>
+    /// GET /job/{jobId}/parameters. Returns all parameters for the job.
+    /// </summary>
+    public async Task<List<JobParameter>> GetJobParametersAsync(int jobId, CancellationToken cancellationToken = default)
+    {
+        var list = await http.GetFromJsonAsync<List<JobParameter>>($"jobs/{jobId}/parameters", cancellationToken);
+        return list ?? [];
+    }
+
+    /// <summary>
+    /// PUT /job/{jobId}/parameters. Overwrites the job parameters with the input parameters
+    /// </summary>
+    public async Task SetJobParametersAsync(int jobId, Dictionary<string, string?> parameters, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PutAsJsonAsync($"jobs/{jobId}/parameters", new { Parameters = parameters }, cancellationToken);
+        res.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
     /// Returns the full URL for the job log SSE stream (GET /runs/{id}/logs/stream).
     /// Resume is via Last-Event-ID header (EventSource sends it automatically on reconnect).
     /// </summary>

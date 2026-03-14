@@ -1,3 +1,4 @@
+using SSAReplacement.Wasm.Client.Executables;
 using SSAReplacement.Wasm.Client.Schedules;
 
 namespace SSAReplacement.Wasm.Client.Jobs;
@@ -8,12 +9,11 @@ namespace SSAReplacement.Wasm.Client.Jobs;
 public class JobDetail
 {
     public int Id { get; set; }
-    public int? ExecutableId { get; set; }
     public string Name { get; set; } = "";
     public bool IsEnabled { get; set; }
     public DateTime CreatedAt { get; set; }
     public string? NotifyEmail { get; set; }
-    public string? ExecutableName { get; set; }
-    public List<JobVariable> Variables { get; set; } = [];
+    public Executable Executable { get; set; } = new();
+    public List<JobParameter> Variables { get; set; } = [];
     public List<Schedule> Schedules { get; set; } = [];
 };

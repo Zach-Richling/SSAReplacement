@@ -55,7 +55,7 @@ public static class JobRunEndpoints
         });
     }
 
-    private static async IAsyncEnumerable<SseItem<JobLogDto?>> StreamJobLogsAsync(
+    private static async IAsyncEnumerable<SseItem<JobLogDto>> StreamJobLogsAsync(
         int id,
         int lastSeenId,
         IServiceScopeFactory scopeFactory,
@@ -64,27 +64,31 @@ public static class JobRunEndpoints
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var job = await db.JobRuns
+            .AsNoTracking()
+            .Where(jr => jr.Id == id)
+            .FirstAsync(cancellationToken);
+
         while (!cancellationToken.IsCancellationRequested)
         {
             var logs = await db.JobLogs
                 .AsNoTracking()
                 .Where(l => l.JobRunId == id && l.Id > lastSeenId)
                 .OrderBy(l => l.Id)
-                .Take(100)
                 .ToListAsync(cancellationToken);
 
             foreach (var log in logs)
             {
                 var dto = JobLogDto.From(log);
-                yield return new SseItem<JobLogDto?>(dto, "job-log") { EventId = log.Id.ToString() };
+                yield return new SseItem<JobLogDto>(dto, "job-log") { EventId = log.Id.ToString() };
                 lastSeenId = log.Id;
             }
 
-            var currentRun = await db.JobRuns.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
-            if (currentRun is null || currentRun.Status != JobRunnerService.StatusRunning)
+            //Keep connection open but stop querying for non-running jobs
+            //All logs will be sent to the client by the above foreach loop
+            if (job.Status != JobRunnerService.StatusRunning)
             {
-                yield return new SseItem<JobLogDto?>(null, "end");
-                yield break;
+                await Task.Delay(-1, cancellationToken);
             }
 
             await Task.Delay(2000, cancellationToken);

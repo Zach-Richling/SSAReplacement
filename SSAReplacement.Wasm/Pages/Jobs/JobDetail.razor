@@ -1,6 +1,7 @@
 ﻿@page "/jobs/{Id:int}"
 @using Humanizer
 @using SSAReplacement.Wasm.Pages.Jobs.Modals
+@using SSAReplacement.Wasm.Pages.Jobs.Models
 
 @inject SsaApiClient Api
 @inject NavigationManager Nav
@@ -33,7 +34,7 @@ else
                     <div>@_job.Name</div>
 
                     <div class="font-medium">Executable</div>
-                    <div>@_job.ExecutableName</div>
+                    <div>@_job.Executable.Name</div>
 
                     <div class="font-medium">Created At</div>
                     <div>@_job.CreatedAt.ToTimeAgo()</div>
@@ -57,12 +58,8 @@ else
                                 @CronHelper.GetDescription(schedule.CronExpression)
                             </CellTemplate>
                         </BbDataTableColumn>
-                        <BbDataTableColumn TData="Schedule" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created">
-                            <CellTemplate Context="schedule">
-                                @schedule.CreatedAt.ToTimeAgo()
-                            </CellTemplate>
-                        </BbDataTableColumn>
-                        <BbDataTableColumn TData="Schedule" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Enabled">
+                        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CreatedAt.ToTimeAgo())" Header="Created" />
+                        <BbDataTableColumn TData="Schedule" TValue="string" Header="Enabled">
                             <CellTemplate Context="schedule">
                                 <BbBadge Variant="@(schedule.IsEnabled? BadgeVariant.Default: BadgeVariant.Secondary)">@(schedule.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
                             </CellTemplate>
@@ -77,8 +74,39 @@ else
             </BbCardContent>
         </BbCard>
     </div>
-    <BbAccordion Class="mt-3">
-        <BbCard>
+    <BbAccordion Collapsible>
+        <BbCard Class="mt-3">
+            <BbCardContent>
+                <BbAccordionItem Value="job-parameters">
+                    <BbAccordionTrigger>Job Parameters</BbAccordionTrigger>
+                    <BbAccordionContent>
+                        <BbDataTable Data="_parameterDisplayItems" TData="JobParameterDisplayItem" ShowToolbar="false" ShowPagination="false">
+                            <Columns>
+                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Key" Header="Name" />
+                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Description ?? "-")" Header="Description" />
+                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Type" Header="Type" />
+                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Value ?? "-")" Header="Value" />
+                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Property="x => x.IsRequired" Header="Is Required?" />
+                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Header="Actions">
+                                    <CellTemplate>
+                                        <EditJobParameterModal Item="context" />
+                                    </CellTemplate>
+                                </BbDataTableColumn>
+                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Header="">
+                                    <CellTemplate>
+                                        @if(!context.IsExecutableParameter)
+                                        {
+                                            <LucideIcon Name="triangle-alert" Class="h-4 w-4" Color="#FFFF00" />
+                                        }
+                                    </CellTemplate>
+                                </BbDataTableColumn>
+                            </Columns>
+                        </BbDataTable>
+                    </BbAccordionContent>
+                </BbAccordionItem>
+            </BbCardContent>
+        </BbCard>
+        <BbCard Class="mt-3">
             <BbCardContent>
                 <BbAccordionItem Value="job-runs">
                     <BbAccordionTrigger>Job Runs</BbAccordionTrigger>
@@ -86,11 +114,7 @@ else
                         <BbDataTable Data="_runs" TData="JobRun" ShowToolbar="false">
                             <Columns>
                                 <BbDataTableColumn TData="JobRun" TValue="string" Property="x => x.Trigger" Header="Trigger" />
-                                <BbDataTableColumn TData="JobRun" TValue="DateTime" Property="x => x.StartedAt" Header="Started At">
-                                    <CellTemplate Context="run">
-                                        @run.StartedAt.ToLocalTime()
-                                    </CellTemplate>
-                                </BbDataTableColumn>
+                                <BbDataTableColumn TData="JobRun" TValue="DateTime" Property="x => x.StartedAt.ToLocalTime()" Header="Started At" />
                                 <BbDataTableColumn TData="JobRun" TValue="DateTime?" Property="x => x.FinishedAt" Header="Duration">
                                     <CellTemplate Context="run">
                                         @(run.FinishedAt.HasValue ? (run.FinishedAt.Value - run.StartedAt).Humanize() : "-")
@@ -121,6 +145,7 @@ else
 
     private SSAReplacement.Wasm.Client.Jobs.JobDetail _job = null!;
     private List<JobRun> _runs = [];
+    private List<JobParameterDisplayItem> _parameterDisplayItems = [];
 
     private bool _loading = true;
     private string? _error;
@@ -142,6 +167,7 @@ else
         {
             var jobTask = Api.Job.GetJobAsync(Id);
             var runTask = Api.Job.GetJobRunsAsync(Id);
+            var jobParametersTask = Api.Job.GetJobParametersAsync(Id);
 
             var job = await jobTask;
             if (job is null)
@@ -151,7 +177,27 @@ else
             }
 
             _job = job;
+
+            var exeParameters = await Api.Executable.GetExecutableVersionParametersAsync(job.Executable.Id, job.Executable.ActiveVersion);
+            var jobParameters = await jobParametersTask;
             _runs = await runTask;
+
+
+            //Merge job params and executable params for display
+            //These could be out of sync if the user has defined parameters for one version
+            //and rolled back to another. The server also doesn't save the default value of
+            //executable parameters as job parameters.
+            var jobParams = jobParameters.GroupJoin(exeParameters, jp => jp.Key, xp => xp.Name, (jp, xp) => new { jp, xp })
+                .SelectMany(x => x.xp.DefaultIfEmpty(), (x, xp) => new JobParameterDisplayItem(x.jp, xp));
+
+            var exeParams = exeParameters.GroupJoin(jobParameters, xp => xp.Name, jp => jp.Key, (xp, jp) => new { xp, jp })
+                 .SelectMany(x => x.jp.DefaultIfEmpty(), (x, jp) => new JobParameterDisplayItem(jp, x.xp));
+
+            _parameterDisplayItems = jobParams.Union(exeParams)
+                .DistinctBy(x => x.Key)
+                .OrderBy(x => x.IsExecutableParameter)
+                .ThenBy(x => x.Key)
+                .ToList();
         }
         catch (Exception e)
         {
@@ -181,13 +227,31 @@ else
     {
         try
         {
-            _job.Schedules.RemoveAll(s => s.Id == jobScheduleId);
-            await Api.Job.SetJobSchedulesAsync(_job.Id, _job.Schedules.Select(x => x.Id));
+            await Api.Job.SetJobSchedulesAsync(_job.Id, _job.Schedules.Select(x => x.Id).Where(x => x != jobScheduleId));
             Toasts.Success("Job schedule removed successfully");
         } 
         catch (Exception) 
         {
-            Toasts.Error("An error occurred while remove the job schedule");
+            Toasts.Error("An error occurred while removing the job schedule");
+        }
+    }
+
+    private async Task SaveJobParameters()
+    {
+        try
+        {
+            var parameters = _parameterDisplayItems
+                .ToDictionary(x => x.Key, x => x.Value);
+
+            await Api.Job.SetJobParametersAsync(Id, parameters);
+
+            await LoadData();
+
+            Toasts.Success("Job parameters were saved successfully");
+        } 
+        catch (HttpRequestException)
+        {
+            Toasts.Error("Something went wrong when saving job parameters");
         }
     }
 

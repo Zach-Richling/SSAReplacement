@@ -9,4 +9,5 @@ public class Schedule
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<JobSchedule> JobSchedules { get; set; } = [];
+    public ICollection<JobRun> JobRuns { get; set; } = [];
 }

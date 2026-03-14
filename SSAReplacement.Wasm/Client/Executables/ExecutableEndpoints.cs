@@ -54,8 +54,15 @@ public class ExecutableEndpoints(HttpClient http)
     /// </summary>
     public async Task<List<ExecutableParameter>> GetExecutableVersionParametersAsync(int executableId, int versionId, CancellationToken cancellationToken = default)
     {
-        var list = await http.GetFromJsonAsync<List<ExecutableParameter>>($"executables/{executableId}/versions/{versionId}/parameters", cancellationToken);
-        return list ?? [];
+        try
+        {
+            var list = await http.GetFromJsonAsync<List<ExecutableParameter>>($"executables/{executableId}/versions/{versionId}/parameters", cancellationToken);
+            return list ?? [];
+        }
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
+        {
+            return [];
+        }
     }
 
     /// <summary>

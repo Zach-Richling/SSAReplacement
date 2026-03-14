@@ -1,0 +1,81 @@
+@switch (TypeName)
+{
+    case SupportedTypes.Int32:
+        <BbInput Value="@ParseInt32(Value)"
+                 ValueChanged="v => ValueChanged.InvokeAsync(v)"
+                 Class="@Class"
+                 Type="InputType.Number"
+                 Placeholder="Enter a number" />
+        break;
+
+    case SupportedTypes.Int64:
+        <BbInput Value="@ParseInt64(Value)"
+                 ValueChanged="v => ValueChanged.InvokeAsync(v)"
+                 Class="@Class"
+                 Type="InputType.Number"
+                 Placeholder="Enter a number"/>
+        break;
+
+    case SupportedTypes.DateTime:
+        <BbDatePicker Value="ParseDateTime(Value)"
+                      ValueChanged="v => ValueChanged.InvokeAsync(v?.ToString())"
+                      Class="@Class" />
+        break;
+
+    case SupportedTypes.Boolean:
+        <BbSelect TValue="bool?"
+                  Value="ParseBoolean(Value)"
+                  ValueChanged="v => ValueChanged.InvokeAsync(v.ToString())"
+                  Options="_boolOptions"
+                  Placeholder="Select a value"
+                  Class="@Class" />
+        break;
+
+    case SupportedTypes.String:
+        <BbInput Value="@Value"
+                 ValueChanged="v => ValueChanged.InvokeAsync(v)"
+                 Class="@Class"
+                 Placeholder="Enter a value" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string TypeName { get; set; } = "";
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private static readonly List<SelectOption<bool?>> _boolOptions =
+    [
+        new(true, "True"),
+        new(false, "False")
+    ];
+
+    private static string? ParseInt32(string? value) => int.TryParse(value, out var v) ? v.ToString() : null;
+    private static string? ParseInt64(string? value) => long.TryParse(value, out var v) ? v.ToString() : null;
+    private static DateTime? ParseDateTime(string? value) => DateTime.TryParse(value, out var v) ? v : null;
+    private static bool? ParseBoolean(string? value) => bool.TryParse(value, out var v) ? v : null;
+
+    public static bool IsSupportedType(string? type) => type is
+        SupportedTypes.Int32 or
+        SupportedTypes.Int64 or
+        SupportedTypes.DateTime or
+        SupportedTypes.Boolean or
+        SupportedTypes.String;
+
+    public static class SupportedTypes
+    {
+        public const string Int32 = "Int32";
+        public const string Int64 = "Int64";
+        public const string DateTime = "DateTime";
+        public const string String = "String";
+        public const string Boolean = "Boolean";
+    }
+}

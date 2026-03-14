@@ -19,54 +19,62 @@ public sealed class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Schedule>().ToTable("Schedule");
-        modelBuilder.Entity<Executable>().ToTable("Executable");
-        modelBuilder.Entity<ExecutableVersion>().ToTable("ExecutableVersion");
         modelBuilder.Entity<Job>().ToTable("Job");
         modelBuilder.Entity<JobSchedule>().ToTable("JobSchedule");
-        modelBuilder.Entity<JobVariable>().ToTable("JobVariable");
         modelBuilder.Entity<JobRun>().ToTable("JobRun");
+        modelBuilder.Entity<JobVariable>().ToTable("JobVariable");
         modelBuilder.Entity<JobLog>().ToTable("JobLog");
+
+        modelBuilder.Entity<Executable>().ToTable("Executable");
+        modelBuilder.Entity<ExecutableVersion>().ToTable("ExecutableVersion");
         modelBuilder.Entity<ExecutableParameter>().ToTable("ExecutableParameter");
+
+        modelBuilder.Entity<Schedule>().ToTable("Schedule");
 
         modelBuilder.Entity<Job>(b =>
         {
-            b.HasOne(e => e.Executable).WithMany(x => x.Jobs).HasForeignKey(e => e.ExecutableId).OnDelete(DeleteBehavior.Restrict);
+            b.HasKey(j => j.Id);
+            b.HasOne(e => e.Executable).WithMany(x => x.Jobs).HasForeignKey(e => e.ExecutableId);
+            b.HasMany(j => j.JobSchedules).WithOne(js => js.Job).HasForeignKey(js => js.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+            b.HasMany(j => j.Variables).WithOne(v => v.Job).HasForeignKey(v => v.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<JobSchedule>(b =>
         {
             b.HasKey(e => e.Id);
-            b.HasOne(e => e.Job).WithMany(j => j.JobSchedules).HasForeignKey(e => e.JobId).OnDelete(DeleteBehavior.Cascade);
-            b.HasOne(e => e.Schedule).WithMany(s => s.JobSchedules).HasForeignKey(e => e.ScheduleId).OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<ExecutableVersion>(b =>
-        {
-            b.HasOne(e => e.Executable).WithMany(x => x.Versions).HasForeignKey(e => e.ExecutableId).OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<JobVariable>(b =>
-        {
-            b.HasOne(e => e.Job).WithMany(j => j.Variables).HasForeignKey(e => e.JobId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(e => e.Schedule).WithMany(s => s.JobSchedules).HasForeignKey(e => e.ScheduleId);
         });
 
         modelBuilder.Entity<JobRun>(b =>
         {
-            b.HasOne(e => e.Job).WithMany(j => j.Runs).HasForeignKey(e => e.JobId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(e => e.Job).WithMany(j => j.Runs).HasForeignKey(e => e.JobId);
             b.HasOne(e => e.ExecutableVersion).WithMany(v => v.JobRuns).HasForeignKey(e => e.ExecutableVersionId);
-            b.HasOne(e => e.Schedule).WithMany().HasForeignKey(e => e.ScheduleId);
+            b.HasOne(e => e.Schedule).WithMany(s => s.JobRuns).HasForeignKey(e => e.ScheduleId);
+        });
+
+        modelBuilder.Entity<JobVariable>(b =>
+        {
+            b.HasKey(e => e.Id);
+            b.HasOne(e => e.Job).WithMany(j => j.Variables).HasForeignKey(e => e.JobId);
         });
 
         modelBuilder.Entity<JobLog>(b =>
         {
-            b.HasOne(e => e.JobRun).WithMany(r => r.Logs).HasForeignKey(e => e.JobRunId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(e => e.JobRun).WithMany(r => r.Logs).HasForeignKey(e => e.JobRunId);
+        });
+
+
+        modelBuilder.Entity<ExecutableVersion>(b =>
+        {
+            b.HasOne(e => e.Executable).WithMany(x => x.Versions).HasForeignKey(e => e.ExecutableId);
         });
 
         modelBuilder.Entity<ExecutableParameter>(b =>
         {
             b.HasKey(e => e.Id);
-            b.HasOne(e => e.Version).WithMany(x => x.Parameters).HasForeignKey(e => e.ExecutableVersionId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(e => e.Version).WithMany(x => x.Parameters).HasForeignKey(e => e.ExecutableVersionId);
         });
+
+        modelBuilder.Entity<Schedule>(b => b.HasKey(s => s.Id));
     }
 }

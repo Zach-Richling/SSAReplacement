@@ -1,0 +1,92 @@
+@using SSAReplacement.Wasm.Pages.Jobs.Models
+
+<BbDialog @bind-Open="IsOpen">
+    <BbDialogTrigger>
+        <BbButton Disabled="!Item.IsExecutableParameter">Edit</BbButton>
+    </BbDialogTrigger>
+    <BbDialogContent>
+        <BbDialogHeader>
+            <BbDialogTitle>Edit @Item.Key</BbDialogTitle>
+        </BbDialogHeader>
+        @if (Item.ExecutableParameter is null || !DynamicFormInput.IsSupportedType(Item.ExecutableParameter.TypeName))
+        {
+            <BbAlert Variant="AlertVariant.Danger">Editing this parameter is not supported.</BbAlert>
+        }
+        else
+        {
+            <EditForm EditContext="_editContext" id="edit-job-parameter-form" OnSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+                <BbField Orientation="FieldOrientation.Responsive">
+                    <BbFieldLabel For="parameter-value">Parameter Value</BbFieldLabel>
+                    <BbFieldDescription>@Item.Description</BbFieldDescription>
+                    <BbFieldContent>
+                        <DynamicFormInput TypeName="@Item.ExecutableParameter.TypeName" @bind-Value="_formState.Value" />
+                        <ValidationMessage For="() => _formState.Value" />
+                    </BbFieldContent>
+                </BbField>
+            </EditForm>
+            <BbDialogFooter>
+                <BbButton Type="ButtonType.Submit" form="edit-job-parameter-form">Ok</BbButton>
+            </BbDialogFooter>
+        }
+    </BbDialogContent>
+</BbDialog>
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter, EditorRequired]
+    public JobParameterDisplayItem Item { get; set; }
+
+    [Parameter]
+    public EventCallback OnParameterEdited { get; set; }
+
+    private EditJobParameterFormState _formState = new();
+    private EditContext _editContext = null!;
+    private ValidationMessageStore _validationMessageStore = null!;
+
+    protected override void OnInitialized()
+    {
+        _formState.Value = Item.Value;
+
+        _editContext = new EditContext(_formState);
+        _validationMessageStore = new ValidationMessageStore(_editContext);
+
+        _editContext.OnFieldChanged += (_, args) =>
+        {
+            _validationMessageStore.Clear();
+            _editContext.NotifyValidationStateChanged();
+        };
+    }
+
+    private async Task HandleSubmit()
+    {
+        var valueField = new FieldIdentifier(_formState, nameof(EditJobParameterFormState.Value));
+        _validationMessageStore.Clear(valueField);
+
+        if (Item.IsRequired)
+        {
+            if (string.IsNullOrWhiteSpace(_formState.Value))
+            {
+                _validationMessageStore.Add(valueField, "A value is required.");
+                _editContext.NotifyValidationStateChanged();
+                return;
+            }
+        }
+
+        Item.JobParameter.Value = _formState.Value;
+
+        if (OnParameterEdited.HasDelegate)
+        {
+            await OnParameterEdited.InvokeAsync();
+        }
+
+        IsOpen = false;
+    }
+
+    private class EditJobParameterFormState
+    {
+        public string? Value { get; set; }
+    }
+}

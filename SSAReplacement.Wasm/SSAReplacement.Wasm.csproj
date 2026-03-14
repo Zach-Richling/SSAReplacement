@@ -16,12 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BlazorBlueprint.Components" Version="3.4.0" />
+    <PackageReference Include="BlazorBlueprint.Components" Version="3.5.2" />
     <PackageReference Include="CronExpressionDescriptor" Version="2.45.0" />
     <PackageReference Include="Cronos" Version="0.11.1" />
-    <PackageReference Include="Humanizer.Core" Version="3.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.3" PrivateAssets="all" />
+    <PackageReference Include="Humanizer.Core" Version="3.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.4" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
