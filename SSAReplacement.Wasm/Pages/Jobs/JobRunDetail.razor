@@ -32,8 +32,7 @@ else
                         }
 
                         <div class="whitespace-pre-wrap break-all">
-                            <span>[</span><span>@logDateStr</span><span class="@(logLevel == "ERROR" ? "text-destructive" : "text-primary")">@(" " + logLevel)</span><span>] </span>
-                            <span class="whitespace-pre-wrap">@context.Content</span>
+                            <span>[ @logDateStr</span><span class="@(logLevel == "ERROR" ? "text-destructive" : "text-primary")">@(" " + logLevel)</span><span>] @context.Content</span>
                         </div>
                     </BbEventTemplate>
                 </BbEventConsumer>
