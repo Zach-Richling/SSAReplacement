@@ -120,4 +120,13 @@ public class JobEndpoints(HttpClient http)
         return await res.Content.ReadFromJsonAsync<AddJobResponse>(cancellationToken)
             ?? throw new HttpRequestException("Unexpected empty response from server.");
     }
+
+    /// <summary>
+    /// PUT /jobs/{jobId}. Updates a job
+    /// </summary>
+    public async Task UpdateJobAsync(int jobId, UpdateJobRequest request, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PutAsJsonAsync($"jobs/{jobId}", request, cancellationToken);
+        res.EnsureSuccessStatusCode();
+    }
 }

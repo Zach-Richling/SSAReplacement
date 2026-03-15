@@ -27,7 +27,7 @@
         <BbDataTableColumn TData="Job" TValue="string" Property="@(x => x.ExecutableName)" Header="Executable" Sortable></BbDataTableColumn>
         <BbDataTableColumn TData="Job" TValue="bool" Property="@(x => x.IsEnabled)" Header="Enabled" Sortable>
             <CellTemplate Context="job">
-                <BbBadge Variant="@(job.IsEnabled ? BadgeVariant.Default : BadgeVariant.Destructive)">@(job.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
+                <BbBadge Variant="@(job.IsEnabled ? BadgeVariant.Default : BadgeVariant.Secondary)">@(job.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
             </CellTemplate>
         </BbDataTableColumn>
         <BbDataTableColumn TData="Job" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created" Sortable>

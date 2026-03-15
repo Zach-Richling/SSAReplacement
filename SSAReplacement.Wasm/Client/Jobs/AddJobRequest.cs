@@ -7,5 +7,4 @@ public record AddJobRequest(
     int ExecutableId,
     string Name,
     bool IsEnabled = true,
-    string? WebhookUrl = null,
     string? NotifyEmail = null);

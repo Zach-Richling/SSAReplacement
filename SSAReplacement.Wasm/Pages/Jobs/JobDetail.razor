@@ -20,14 +20,15 @@ else if (_hasError)
 } 
 else
 {
-    <div class="flex flex-row justify-between items-center">
-        <h1 class="text-lg font-semibold m-0">@_job.Name</h1>
-        <BbButton OnClick="TriggerJobRun">Trigger Job</BbButton>
-    </div>
-
     <div class="grid grid-cols-2 gap-3 mt-3">
         <BbCard>
-            <BbCardHeader>Job Details</BbCardHeader>
+            <BbCardHeader Class="flex flex-row justify-between items-center">
+                Job Details
+                <div>
+                    <BbButton OnClick="TriggerJobRun">Start</BbButton>
+                    <BbButton OnClick="ToggleEnabled" Class="ml-2" Variant="@(_job.IsEnabled ? ButtonVariant.Secondary : ButtonVariant.Default)">@(_job.IsEnabled ? "Disable" : "Enable")</BbButton>
+                </div>
+            </BbCardHeader>
             <BbCardContent>
                 <div class="grid grid-cols-2 gap-1">
                     <div class="font-medium">Name</div>
@@ -50,7 +51,7 @@ else
                 <AddScheduleModal Job="_job" OnScheduleCreated="LoadJob" />
             </BbCardHeader>
             <BbCardContent>
-                <BbDataTable Data="_job.Schedules" TData="Schedule" ShowToolbar="false">
+                <BbDataTable Data="_job.Schedules" TData="Schedule" ShowToolbar="false" ShowPagination="false">
                     <Columns>
                         <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.Name)" Header="Schedule Name"></BbDataTableColumn>
                         <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CronExpression)" Header="Frequency">
@@ -58,7 +59,6 @@ else
                                 @CronHelper.GetDescription(schedule.CronExpression)
                             </CellTemplate>
                         </BbDataTableColumn>
-                        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CreatedAt.ToTimeAgo())" Header="Created" />
                         <BbDataTableColumn TData="Schedule" TValue="string" Header="Enabled">
                             <CellTemplate Context="schedule">
                                 <BbBadge Variant="@(schedule.IsEnabled? BadgeVariant.Default: BadgeVariant.Secondary)">@(schedule.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
@@ -156,6 +156,7 @@ else
 
     private SSAReplacement.Wasm.Client.Jobs.JobDetail _job = null!;
     private List<JobRun> _runs = [];
+
     private List<JobParameterDisplayItem> _parameterDisplayItems = [];
     private Dictionary<string, string?> _originalParameterValues = new();
     private bool _savingParameters;
@@ -211,7 +212,7 @@ else
 
             _parameterDisplayItems = jobParams.Union(exeParams)
                 .DistinctBy(x => x.Key)
-                .OrderBy(x => x.IsExecutableParameter)
+                .OrderByDescending(x => x.IsExecutableParameter)
                 .ThenBy(x => x.Key)
                 .ToList();
 
@@ -242,6 +243,19 @@ else
         }
     }
 
+    private async Task ToggleEnabled()
+    {
+        try
+        {
+            await Api.Job.UpdateJobAsync(Id, new UpdateJobRequest(_job.Name, !_job.IsEnabled, _job.NotifyEmail));
+            await LoadJob();
+        } 
+        catch (Exception)
+        {
+            Toasts.Error("An error occured while updating the job");
+        }
+    }
+
     private async Task LoadJob()
     {
         try
@@ -253,7 +267,7 @@ else
         }
         catch (Exception)
         {
-            Toasts.Error("An error occurred while reloading job details.");
+            Toasts.Error("An error occurred while reloading job details");
         }
     }
 
@@ -288,7 +302,7 @@ else
         } 
         catch (HttpRequestException)
         {
-            Toasts.Error("Something went wrong when saving job parameters");
+            Toasts.Error("An error occurred while saving job parameters");
         }
         finally
         {
