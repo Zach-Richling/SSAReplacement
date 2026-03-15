@@ -5,7 +5,9 @@
                  ValueChanged="v => ValueChanged.InvokeAsync(v)"
                  Class="@Class"
                  Type="InputType.Number"
-                 Placeholder="Enter a number" />
+                 Placeholder="Enter a number"
+                 min="@int.MinValue"
+                 max="@int.MaxValue"/>
         break;
 
     case SupportedTypes.Int64:
@@ -13,7 +15,9 @@
                  ValueChanged="v => ValueChanged.InvokeAsync(v)"
                  Class="@Class"
                  Type="InputType.Number"
-                 Placeholder="Enter a number"/>
+                 Placeholder="Enter a number"
+                 min="@long.MinValue"
+                 max="@long.MaxValue"/>
         break;
 
     case SupportedTypes.DateTime:
@@ -58,17 +62,17 @@
         new(false, "False")
     ];
 
-    private static string? ParseInt32(string? value) => int.TryParse(value, out var v) ? v.ToString() : null;
-    private static string? ParseInt64(string? value) => long.TryParse(value, out var v) ? v.ToString() : null;
-    private static DateTime? ParseDateTime(string? value) => DateTime.TryParse(value, out var v) ? v : null;
-    private static bool? ParseBoolean(string? value) => bool.TryParse(value, out var v) ? v : null;
-
     public static bool IsSupportedType(string? type) => type is
         SupportedTypes.Int32 or
         SupportedTypes.Int64 or
         SupportedTypes.DateTime or
         SupportedTypes.Boolean or
         SupportedTypes.String;
+
+    private static string? ParseInt32(string? value) => int.TryParse(value, out var v) ? v.ToString() : null;
+    private static string? ParseInt64(string? value) => long.TryParse(value, out var v) ? v.ToString() : null;
+    private static DateTime? ParseDateTime(string? value) => DateTime.TryParse(value, out var v) ? v : null;
+    private static bool? ParseBoolean(string? value) => bool.TryParse(value, out var v) ? v : null;
 
     public static class SupportedTypes
     {

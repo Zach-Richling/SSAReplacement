@@ -1,4 +1,4 @@
-﻿@page "/jobs/{Id:int}"
+@page "/jobs/{Id:int}"
 @using Humanizer
 @using SSAReplacement.Wasm.Pages.Jobs.Modals
 @using SSAReplacement.Wasm.Pages.Jobs.Models
@@ -47,7 +47,7 @@ else
         <BbCard>
             <BbCardHeader Class="flex flex-row justify-between items-center">
                 Schedules
-                <AddScheduleModal Job="_job" OnScheduleCreated="LoadData" />
+                <AddScheduleModal Job="_job" OnScheduleCreated="LoadJob" />
             </BbCardHeader>
             <BbCardContent>
                 <BbDataTable Data="_job.Schedules" TData="Schedule" ShowToolbar="false">
@@ -89,7 +89,7 @@ else
                                 <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Property="x => x.IsRequired" Header="Is Required?" />
                                 <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Header="Actions">
                                     <CellTemplate>
-                                        <EditJobParameterModal Item="context" />
+                                        <EditJobParameterModal Item="context" OnParameterEdited="StateHasChanged" />
                                     </CellTemplate>
                                 </BbDataTableColumn>
                                 <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Header="">
@@ -137,6 +137,17 @@ else
             </BbCardContent>
         </BbCard>
     </BbAccordion>
+
+    @if (UnsavedChangeCount > 0)
+    {
+        <div class="unsaved-changes-bar">
+            <LucideIcon Name="save" Class="h-4 w-4 shrink-0" />
+            <span>You have <strong>@UnsavedChangeCount</strong> unsaved changes</span>
+            <BbButton Size="ButtonSize.Small" OnClick="SaveJobParameters" Loading="_savingParameters">
+                @(_savingParameters ? "Saving…" : "Save Changes")
+            </BbButton>
+        </div>
+    }
 }
 
 @code {
@@ -146,10 +157,15 @@ else
     private SSAReplacement.Wasm.Client.Jobs.JobDetail _job = null!;
     private List<JobRun> _runs = [];
     private List<JobParameterDisplayItem> _parameterDisplayItems = [];
+    private Dictionary<string, string?> _originalParameterValues = new();
+    private bool _savingParameters;
 
     private bool _loading = true;
     private string? _error;
     private bool _hasError => !string.IsNullOrEmpty(_error);
+
+    private int UnsavedChangeCount => _parameterDisplayItems
+        .Count(x => _originalParameterValues.TryGetValue(x.Key, out var original) && x.Value != original);
 
     protected override async Task OnInitializedAsync() => await LoadData();
 
@@ -198,6 +214,9 @@ else
                 .OrderBy(x => x.IsExecutableParameter)
                 .ThenBy(x => x.Key)
                 .ToList();
+
+            _originalParameterValues = _parameterDisplayItems
+                .ToDictionary(x => x.Key, x => x.Value);
         }
         catch (Exception e)
         {
@@ -215,11 +234,26 @@ else
         {
             await Api.Job.TriggerJobAsync(Id);
             Toasts.Success("Job triggered successfully");
-            await LoadData();
+            _runs = await Api.Job.GetJobRunsAsync(Id);
         } 
         catch (Exception) 
         {
             Toasts.Error("An error occurred while triggering the job");
+        }
+    }
+
+    private async Task LoadJob()
+    {
+        try
+        {
+            var job = await Api.Job.GetJobAsync(Id);
+
+            if (job is not null)
+                _job = job;
+        }
+        catch (Exception)
+        {
+            Toasts.Error("An error occurred while reloading job details.");
         }
     }
 
@@ -229,6 +263,8 @@ else
         {
             await Api.Job.SetJobSchedulesAsync(_job.Id, _job.Schedules.Select(x => x.Id).Where(x => x != jobScheduleId));
             Toasts.Success("Job schedule removed successfully");
+
+            await LoadJob();
         } 
         catch (Exception) 
         {
@@ -238,6 +274,7 @@ else
 
     private async Task SaveJobParameters()
     {
+        _savingParameters = true;
         try
         {
             var parameters = _parameterDisplayItems
@@ -252,6 +289,10 @@ else
         catch (HttpRequestException)
         {
             Toasts.Error("Something went wrong when saving job parameters");
+        }
+        finally
+        {
+            _savingParameters = false;
         }
     }
 
