@@ -3,4 +3,10 @@ namespace SSAReplacement.Wasm.Client.Executables;
 /// <summary>
 /// Executable detail with versions (matches API ExecutableDetailDto from GET /executables/{id}).
 /// </summary>
-public record ExecutableDetail(int Id, string Name, DateTime CreatedAt, IReadOnlyList<ExecutableVersion> Versions);
+public class ExecutableDetail
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public IEnumerable<ExecutableVersion> Versions { get; set; } = [];
+}

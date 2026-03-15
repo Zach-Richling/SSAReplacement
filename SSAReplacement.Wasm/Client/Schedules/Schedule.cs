@@ -3,9 +3,11 @@ namespace SSAReplacement.Wasm.Client.Schedules;
 /// <summary>
 /// Schedule list item (matches API ScheduleDto from GET /schedules).
 /// </summary>
-public record Schedule(
-    int Id,
-    string Name,
-    string CronExpression,
-    bool IsEnabled,
-    DateTime CreatedAt);
+public class Schedule
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string CronExpression { get; set; } = "";
+    public bool IsEnabled { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

@@ -111,13 +111,13 @@ public class JobEndpoints(HttpClient http)
     /// <summary>
     /// POST /jobs. Creates a job. Returns the created job on success.
     /// </summary>
-    public async Task<AddJobResponse> AddJobAsync(AddJobRequest request, CancellationToken cancellationToken = default)
+    public async Task<Job> AddJobAsync(AddJobRequest request, CancellationToken cancellationToken = default)
     {
         var res = await http.PostAsJsonAsync("jobs", request, cancellationToken);
 
         res.EnsureSuccessStatusCode();
 
-        return await res.Content.ReadFromJsonAsync<AddJobResponse>(cancellationToken)
+        return await res.Content.ReadFromJsonAsync<Job>(cancellationToken)
             ?? throw new HttpRequestException("Unexpected empty response from server.");
     }
 

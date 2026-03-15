@@ -40,7 +40,7 @@
     private AddJobScheduleFormState _formState = new();
     private List<Schedule> _allSchedules = [];
     private List<SelectOption<int>> _selectOptions => _allSchedules
-        .Except(Job.Schedules)
+        .Where(x => !Job.Schedules.Any(y => y.Id == x.Id))
         .Select(s => new SelectOption<int>(s.Id, s.Name))
         .ToList();
 

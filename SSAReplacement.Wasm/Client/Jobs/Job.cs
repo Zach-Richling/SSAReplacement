@@ -9,6 +9,4 @@ public record Job(
     string Name,
     bool IsEnabled,
     DateTime CreatedAt,
-    string? WebhookUrl,
-    string? NotifyEmail,
-    string? ExecutableName);
+    string? NotifyEmail);

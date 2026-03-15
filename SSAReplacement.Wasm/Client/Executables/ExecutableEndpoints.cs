@@ -77,9 +77,9 @@ public class ExecutableEndpoints(HttpClient http)
     /// <summary>
     /// POST /executables. Creates an executable. Returns the created executable on success.
     /// </summary>
-    public async Task<Executable> CreateExecutableAsync(CreateExecutableRequest request, CancellationToken cancellationToken = default)
+    public async Task<Executable> CreateExecutableAsync(string name, CancellationToken cancellationToken = default)
     {
-        var res = await http.PostAsJsonAsync("executables", request, cancellationToken);
+        var res = await http.PostAsJsonAsync("executables", new { Name = name }, cancellationToken);
         res.EnsureSuccessStatusCode();
 
         return await res.Content.ReadFromJsonAsync<Executable>(cancellationToken)

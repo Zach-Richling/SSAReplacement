@@ -24,7 +24,6 @@
 <BbDataTable Data="@_sortedJobs" TData="Job" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
     <Columns>
         <BbDataTableColumn TData="Job" TValue="string" Property="@(x => x.Name)" Header="Job Name" Sortable></BbDataTableColumn>
-        <BbDataTableColumn TData="Job" TValue="string" Property="@(x => x.ExecutableName)" Header="Executable" Sortable></BbDataTableColumn>
         <BbDataTableColumn TData="Job" TValue="bool" Property="@(x => x.IsEnabled)" Header="Enabled" Sortable>
             <CellTemplate Context="job">
                 <BbBadge Variant="@(job.IsEnabled ? BadgeVariant.Default : BadgeVariant.Secondary)">@(job.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
@@ -70,7 +69,6 @@
         _sortColumn switch
         {
             "name" => _sortAsc ? _filteredJobs.OrderBy(j => j.Name) : _filteredJobs.OrderByDescending(j => j.Name),
-            "executableName" => _sortAsc ? _filteredJobs.OrderBy(j => j.ExecutableName) : _filteredJobs.OrderByDescending(j => j.ExecutableName),
             "isEnabled" => _sortAsc ? _filteredJobs.OrderBy(j => j.IsEnabled) : _filteredJobs.OrderByDescending(j => j.IsEnabled),
             _ => _filteredJobs
         };

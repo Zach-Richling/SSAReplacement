@@ -122,12 +122,18 @@ else
                                 </BbDataTableColumn>
                                 <BbDataTableColumn TData="JobRun" TValue="string" Property="x => x.Status" Header="Status">
                                     <CellTemplate Context="run">
-                                        <BbBadge Variant="@(run.Status == "Failed" ? BadgeVariant.Destructive : BadgeVariant.Default)">@run.Status</BbBadge>
+                                        <BbBadge 
+                                            Variant="@(run.Status switch 
+                                            {
+                                                "Failed" or "Stopped" => BadgeVariant.Destructive,
+                                                "Running" => BadgeVariant.Secondary,
+                                                _ => BadgeVariant.Default
+                                            })">@run.Status</BbBadge>
                                     </CellTemplate>
                                 </BbDataTableColumn>
                                 <BbDataTableColumn TData="JobRun" TValue="string" Header="Actions">
                                     <CellTemplate Context="run">
-                                        <BbButton Size="ButtonSize.Small" Variant="ButtonVariant.Outline" OnClick="() => NavigateToRunDetail(run.Id)">View Details</BbButton>
+                                        <BbButton Size="ButtonSize.Small" Variant="ButtonVariant.Outline" OnClick="() => NavigateToRunDetail(run.Id)">View</BbButton>
                                     </CellTemplate>
                                 </BbDataTableColumn>
                             </Columns>
