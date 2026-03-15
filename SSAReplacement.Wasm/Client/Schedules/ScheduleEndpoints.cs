@@ -26,4 +26,10 @@ public class ScheduleEndpoints(HttpClient http)
         return await res.Content.ReadFromJsonAsync<Schedule>(cancellationToken)
             ?? throw new HttpRequestException("Unexpected empty response from server.");
     }
+
+    public async Task UpdateScheduleAsync(int scheduleId, UpdateScheduleRequest updateRequest, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PutAsJsonAsync($"schedules/{scheduleId}", updateRequest, cancellationToken);
+        res.EnsureSuccessStatusCode();
+    }
 }

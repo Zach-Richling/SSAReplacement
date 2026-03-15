@@ -1,4 +1,3 @@
-using SSAReplacement.Wasm.Client.Schedules;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -34,7 +33,7 @@ public class JobEndpoints(HttpClient http)
     /// </summary>
     public async Task SetJobSchedulesAsync(int jobId, IEnumerable<int> scheduleIds, CancellationToken cancellationToken = default)
     {
-        var res = await http.PutAsJsonAsync($"jobs/{jobId}/schedules", new PutJobSchedulesRequest(scheduleIds), cancellationToken);
+        var res = await http.PutAsJsonAsync($"jobs/{jobId}/schedules", new { ScheduleIds = scheduleIds }, cancellationToken);
         res.EnsureSuccessStatusCode();
     }
 

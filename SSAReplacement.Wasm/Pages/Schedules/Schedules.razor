@@ -3,6 +3,7 @@
 
 @inject SsaApiClient Api
 @inject BreadcrumbService Breadcrumbs
+@inject ToastService Toasts
 
 <PageTitle>Schedules</PageTitle>
 
@@ -22,19 +23,16 @@
 <BbDataTable Data="_schedules" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
     <Columns>
         <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.Name)" Header="Name"></BbDataTableColumn>
-        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CronExpression)" Header="Frequency">
-            <CellTemplate Context="schedule">
-                <span>@CronHelper.GetDescription(schedule.CronExpression)</span>
-            </CellTemplate>
-        </BbDataTableColumn>
+        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => CronHelper.GetDescription(x.CronExpression))" Header="Frequency" />
         <BbDataTableColumn TData="Schedule" TValue="bool" Property="@(x => x.IsEnabled)" Header="Enabled">
-            <CellTemplate Context="schedule">
-                <BbBadge Variant="@(schedule.IsEnabled ? BadgeVariant.Default : BadgeVariant.Secondary)">@(schedule.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
+            <CellTemplate>
+                <BbBadge Variant="@(context.IsEnabled ? BadgeVariant.Default: BadgeVariant.Secondary)">@(context.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
             </CellTemplate>
         </BbDataTableColumn>
-        <BbDataTableColumn TData="Schedule" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created">
-            <CellTemplate Context="schedule">
-                @schedule.CreatedAt.ToTimeAgo()
+        <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CreatedAt.ToTimeAgo())" Header="Created" />
+        <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions">
+            <CellTemplate>
+                <BbButton Variant="@(context.IsEnabled? ButtonVariant.Secondary: ButtonVariant.Default)" Size="ButtonSize.Small" OnClick="() => ToggleEnabled(context)">@(context.IsEnabled ? "Disable" : "Enable")</BbButton>
             </CellTemplate>
         </BbDataTableColumn>
     </Columns>
@@ -80,6 +78,19 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task ToggleEnabled(Schedule schedule)
+    {
+        try
+        {
+            await Api.Schedule.UpdateScheduleAsync(schedule.Id, new UpdateScheduleRequest(schedule.Name, schedule.CronExpression, !schedule.IsEnabled));
+            schedule.IsEnabled = !schedule.IsEnabled;
+        } 
+        catch (Exception)
+        {
+            Toasts.Error("There was an error while updating the schedule");
         }
     }
 }
