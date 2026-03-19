@@ -25,7 +25,6 @@ public sealed class InitialSchema : Migration
             .WithColumn("Name").AsString(256).NotNullable()
             .WithColumn("IsEnabled").AsBoolean().NotNullable()
             .WithColumn("CreatedAt").AsDateTime2().NotNullable()
-            .WithColumn("WebhookUrl").AsString(2048).Nullable()
             .WithColumn("NotifyEmail").AsString(256).Nullable();
 
         Create.Table("JobSchedule")

@@ -6,7 +6,7 @@ namespace SSAReplacement.Wasm.Client.Executables;
 public class ExecutableDetail
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = "";
     public DateTime CreatedAt { get; set; }
     public IEnumerable<ExecutableVersion> Versions { get; set; } = [];
 }

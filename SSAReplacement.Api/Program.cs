@@ -2,10 +2,16 @@ using FluentMigrator.Runner;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
-using SSAReplacement.Api.Endpoints;
+using SSAReplacement.Api.Common.JobLogWriter;
+using SSAReplacement.Api.Features.Executables;
+using SSAReplacement.Api.Features.Executables.Infrastructure;
+using SSAReplacement.Api.Features.JobRuns;
+using SSAReplacement.Api.Features.JobRuns.Infrastructure;
+using SSAReplacement.Api.Features.Jobs;
+using SSAReplacement.Api.Features.Jobs.Infrastructure;
+using SSAReplacement.Api.Features.Schedules;
+using SSAReplacement.Api.Features.Schedules.Infrastructure;
 using SSAReplacement.Api.Infrastructure;
-using SSAReplacement.Api.Services;
-using SSAReplacement.Api.Services.JobLogWriter;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,9 +34,6 @@ builder.Services.AddFluentMigratorCore()
 // Hangfire
 builder.Services.AddHangfire(config => config.UseInMemoryStorage());
 builder.Services.AddHangfireServer();
-
-// HTTP client for webhooks
-builder.Services.AddHttpClient();
 
 // Job log queue (singleton) and background writer
 builder.Services.AddSingleton<JobLogQueue>();
