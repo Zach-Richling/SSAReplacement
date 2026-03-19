@@ -1,5 +1,6 @@
-﻿@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations
 @inject SsaApiClient Api
+@inject ToastService Toasts
 
 <BbDialog @bind-Open="IsOpen">
     <BbDialogTrigger>
@@ -9,10 +10,6 @@
         <BbDialogHeader>
             <BbDialogTitle>Add a schedule to the job</BbDialogTitle>
         </BbDialogHeader>
-        @if (!string.IsNullOrEmpty(_error))
-        {
-            <BbAlert Variant="AlertVariant.Danger">@_error</BbAlert>
-        }
         <EditForm Model="_formState" id="add-job-schedule-form" OnValidSubmit="SubmitAddJobSchedule">
             <DataAnnotationsValidator />
             <BbField Orientation="FieldOrientation.Responsive">
@@ -22,7 +19,7 @@
             </BbField>
         </EditForm>
         <BbDialogFooter>
-            <BbButton Type="ButtonType.Submit" form="add-job-schedule-form">Add</BbButton>
+            <BbButton Type="ButtonType.Submit" form="add-job-schedule-form" Loading="_submitting">Add</BbButton>
         </BbDialogFooter>
     </BbDialogContent>
 </BbDialog>
@@ -44,7 +41,7 @@
         .Select(s => new SelectOption<int>(s.Id, s.Name))
         .ToList();
 
-    private string? _error;
+    private bool _submitting;
 
     protected override async Task OnInitializedAsync()
     {
@@ -54,14 +51,13 @@
         } 
         catch (Exception)
         {
-            _error = $"Could not load schedule dropdown.";
+            Toasts.Error("Could not load schedule dropdown.");
         }
     }
 
     private async Task SubmitAddJobSchedule()
     {
-        _error = null;
-
+        _submitting = true;
         try
         {
             var newSchedules = Job.Schedules.Select(s => s.Id).ToList();
@@ -74,11 +70,16 @@
                 await OnScheduleCreated.InvokeAsync();
             }
 
+            Toasts.Success("Schedule added to job successfully");
             IsOpen = false;
         }
         catch (Exception ex)
         {
-            _error = "Error when adding schedule: " + ex.Message;
+            Toasts.Error("Error when adding schedule: " + ex.Message);
+        }
+        finally
+        {
+            _submitting = false;
         }
     }
 

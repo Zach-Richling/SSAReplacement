@@ -1,15 +1,11 @@
-﻿@page "/executables/{Id:int}"
+@page "/executables/{Id:int}"
 @using BlazorBlueprint.Primitives.DataGrid
 @using System.Net
 @using SSAReplacement.Wasm.Pages.Executables.Modals
 
 <PageTitle>Executable Detail</PageTitle>
 
-@if (_error is not null)
-{
-    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
-} 
-else if (_loading)
+@if (_loading)
 {
     <BbAlert Variant="AlertVariant.Default" Class="mt-4">Loading...</BbAlert>
 } 
@@ -52,7 +48,7 @@ else
                             <CellTemplate Context="version">
                                 @if(!version.IsActive)
                                 {
-                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => SetActiveVersion(version.Id)" Disabled="_activatingVersion">Activate</BbButton>
+                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => SetActiveVersion(version.Id)" Loading="_activatingVersion">Activate</BbButton>
                                 }
                             </CellTemplate>
                         </BbDataTableColumn>
@@ -98,12 +94,14 @@ else
     [Inject]
     public required BreadcrumbService Breadcrumbs { get; set; }
 
+    [Inject]
+    public required ToastService Toasts { get; set; }
+
     private SSAReplacement.Wasm.Client.Executables.ExecutableDetail _executable = null!;
     private List<ExecutableParameter> _parameters = [];
 
     private bool _loading = true;
     private bool _activatingVersion = false;
-    private string? _error;
 
     private ExecutableVersion? _activeVersion =>
         _executable.Versions.FirstOrDefault(v => v.IsActive);
@@ -128,7 +126,7 @@ else
 
             if (executable is null)
             {
-                _error = "Executable not found.";
+                Toasts.Error("Executable not found.");
                 return;
             }
 
@@ -147,7 +145,7 @@ else
         }
         catch (Exception ex)
         {
-            _error = "Failed to load: " + ex.ToString();
+            Toasts.Error("Failed to load: " + ex.Message);
         }
         finally
         {
@@ -162,11 +160,12 @@ else
         try
         {
             await Api.Executable.ActivateExecutableVersionAsync(Id, versionId);
+            Toasts.Success("Executable version activated successfully");
             await LoadData();
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            Toasts.Error($"Failed to activate version: {ex.Message}");
         }
         finally
         {

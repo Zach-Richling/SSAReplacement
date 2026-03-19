@@ -1,4 +1,4 @@
-﻿@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations
 @using System.IO.Compression
 
 <BbDialog @bind-Open="isOpen">
@@ -9,18 +9,6 @@
         <BbDialogHeader>
             <BbDialogTitle>Upload an executable version</BbDialogTitle>
         </BbDialogHeader>
-        @if (!string.IsNullOrEmpty(uploadError))
-        {
-            <BbAlert Variant="AlertVariant.Danger">
-                <Icon>
-                    <LucideIcon Name="circle-alert" class="h-4 w-4" />
-                </Icon>
-                <ChildContent>
-                    <BbAlertTitle>Something went wrong</BbAlertTitle>
-                    <BbAlertDescription>@uploadError</BbAlertDescription>
-                </ChildContent>
-            </BbAlert>
-        }
         <EditForm EditContext="_editContext" OnValidSubmit="SubmitAddExecutableVersion" id="add-executable-version-form">
             <DataAnnotationsValidator />
 
@@ -35,7 +23,7 @@
 
         </EditForm>
         <BbDialogFooter>
-            <BbButton Type="ButtonType.Submit" form="add-executable-version-form">Add</BbButton>
+            <BbButton Type="ButtonType.Submit" form="add-executable-version-form" Loading="_submitting">Add</BbButton>
         </BbDialogFooter>
     </BbDialogContent>
 </BbDialog>
@@ -44,6 +32,9 @@
 
     [Inject]
     public required SsaApiClient Api { get; set; }
+
+    [Inject]
+    public required ToastService Toasts { get; set; }
 
     [Parameter]
     public EventCallback OnExecutableVersionCreated { get; set; }
@@ -56,8 +47,7 @@
     private ValidationMessageStore _validationMessageStore = null!;
 
     private bool isOpen = false;
-
-    private string? uploadError;
+    private bool _submitting;
 
     private const long MaxAllowedFileSize = 1024 * 1024 * 10;
 
@@ -78,6 +68,7 @@
     {
         long? executableVersionId;
 
+        _submitting = true;
         try
         {
             var selectedFile = _formState.SelectedFile[0];
@@ -111,15 +102,20 @@
                 await OnExecutableVersionCreated.InvokeAsync();
             }
 
+            Toasts.Success("Executable version uploaded successfully");
             isOpen = false;
 
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception e)
         {
-            uploadError = e.Message;
+            Toasts.Error("Failed to upload executable version: " + e.Message);
             Console.WriteLine(e.ToString());
             //TODO Rollback if any API calls error
+        }
+        finally
+        {
+            _submitting = false;
         }
     }
 

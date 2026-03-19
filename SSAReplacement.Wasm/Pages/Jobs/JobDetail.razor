@@ -25,8 +25,8 @@ else
             <BbCardHeader Class="flex flex-row justify-between items-center">
                 Job Details
                 <div>
-                    <BbButton OnClick="TriggerJobRun">Start</BbButton>
-                    <BbButton OnClick="ToggleEnabled" Class="ml-2" Variant="@(_job.IsEnabled ? ButtonVariant.Secondary : ButtonVariant.Default)">@(_job.IsEnabled ? "Disable" : "Enable")</BbButton>
+                    <BbButton OnClick="TriggerJobRun" Loading="_triggeringJob">Start</BbButton>
+                    <BbButton OnClick="ToggleEnabled" Class="ml-2" Loading="_togglingEnabled" Variant="@(_job.IsEnabled ? ButtonVariant.Secondary : ButtonVariant.Default)">@(_job.IsEnabled ? "Disable" : "Enable")</BbButton>
                 </div>
             </BbCardHeader>
             <BbCardContent>
@@ -66,7 +66,7 @@ else
                         </BbDataTableColumn>
                         <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions">
                             <CellTemplate Context="schedule">
-                                <BbButton Variant="ButtonVariant.Destructive" Size="ButtonSize.Small" OnClick="() => RemoveJobSchedule(schedule.Id)">Remove</BbButton>
+                                <BbButton Variant="ButtonVariant.Destructive" Size="ButtonSize.Small" OnClick="() => RemoveJobSchedule(schedule.Id)" Loading="_removingScheduleId == schedule.Id">Remove</BbButton>
                             </CellTemplate>
                         </BbDataTableColumn>
                     </Columns>
@@ -166,6 +166,9 @@ else
     private List<JobParameterDisplayItem> _parameterDisplayItems = [];
     private Dictionary<string, string?> _originalParameterValues = new();
     private bool _savingParameters;
+    private bool _triggeringJob;
+    private bool _togglingEnabled;
+    private int? _removingScheduleId;
 
     private bool _loading = true;
     private string? _error;
@@ -237,6 +240,7 @@ else
 
     private async Task TriggerJobRun()
     {
+        _triggeringJob = true;
         try
         {
             await Api.Job.TriggerJobAsync(Id);
@@ -247,18 +251,29 @@ else
         {
             Toasts.Error("An error occurred while triggering the job");
         }
+        finally
+        {
+            _triggeringJob = false;
+        }
     }
 
     private async Task ToggleEnabled()
     {
+        _togglingEnabled = true;
         try
         {
             await Api.Job.UpdateJobAsync(Id, new UpdateJobRequest(_job.Name, !_job.IsEnabled, _job.NotifyEmail));
+            var wasEnabled = _job.IsEnabled;
             await LoadJob();
+            Toasts.Success($"Job {(wasEnabled ? "disabled" : "enabled")} successfully");
         } 
         catch (Exception)
         {
             Toasts.Error("An error occured while updating the job");
+        }
+        finally
+        {
+            _togglingEnabled = false;
         }
     }
 
@@ -279,6 +294,7 @@ else
 
     private async Task RemoveJobSchedule(int jobScheduleId)
     {
+        _removingScheduleId = jobScheduleId;
         try
         {
             await Api.Job.SetJobSchedulesAsync(_job.Id, _job.Schedules.Select(x => x.Id).Where(x => x != jobScheduleId));
@@ -289,6 +305,10 @@ else
         catch (Exception) 
         {
             Toasts.Error("An error occurred while removing the job schedule");
+        }
+        finally
+        {
+            _removingScheduleId = null;
         }
     }
 

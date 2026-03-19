@@ -1,4 +1,4 @@
-﻿@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations
 
 <BbDialog @bind-Open="IsOpen">
     <BbDialogTrigger>
@@ -8,10 +8,6 @@
         <BbDialogHeader>
             <BbDialogTitle>Add a job</BbDialogTitle> 
         </BbDialogHeader>
-        @if(!string.IsNullOrEmpty(_error))
-        {
-            <BbAlert Variant="AlertVariant.Danger">@_error</BbAlert>
-        }
         <EditForm Model="_formState" id="add-job-form" OnValidSubmit="SubmitAddJob">
             <DataAnnotationsValidator />
             <BbField>
@@ -26,7 +22,7 @@
             </BbField>
         </EditForm>
         <BbDialogFooter>
-            <BbButton Type="ButtonType.Submit" form="add-job-form">Add</BbButton>
+            <BbButton Type="ButtonType.Submit" form="add-job-form" Loading="_submitting">Add</BbButton>
         </BbDialogFooter>
     </BbDialogContent>
 </BbDialog>
@@ -34,6 +30,9 @@
 @code {
     [Inject]
     public required SsaApiClient Api { get; set; }
+
+    [Inject]
+    public required ToastService Toasts { get; set; }
 
     [Parameter]
     public EventCallback OnJobCreated { get; set; }
@@ -45,7 +44,7 @@
     private List<Executable> _executables = [];
     private List<SelectOption<int>> _selectOptions => _executables.Select(e => new SelectOption<int>(e.Id, e.Name)).ToList();
 
-    private string? _error;
+    private bool _submitting;
 
     protected override async Task OnInitializedAsync() => await LoadData();
 
@@ -55,15 +54,15 @@
         {
             _executables = await Api.Executable.GetExecutablesAsync();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _error = "Failed to executables: " + ex.Message;
             _executables = [];
         }
     }
 
     private async Task SubmitAddJob()
     {
+        _submitting = true;
         try
         {
             await Api.Job.AddJobAsync(new AddJobRequest(
@@ -75,11 +74,16 @@
                 await OnJobCreated.InvokeAsync();
             }
 
+            Toasts.Success("Job added successfully");
             IsOpen = false;
         } 
         catch (Exception e)
         {
-            _error = "Failed to add job: " + e.Message;
+            Toasts.Error("Failed to add job: " + e.Message);
+        }
+        finally
+        {
+            _submitting = false;
         }
     }
 

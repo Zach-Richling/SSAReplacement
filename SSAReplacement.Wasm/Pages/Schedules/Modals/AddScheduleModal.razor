@@ -1,4 +1,4 @@
-﻿@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations
 
 <BbDialog @bind-Open="IsOpen">
     <BbDialogTrigger>
@@ -8,10 +8,6 @@
         <BbDialogHeader>
             <BbDialogTitle>Add a schedule</BbDialogTitle>
         </BbDialogHeader>
-        @if (!string.IsNullOrEmpty(_error))
-        {
-            <BbAlert Variant="AlertVariant.Danger">@_error</BbAlert>
-        }
         <EditForm EditContext="_editContext" id="add-schedule-form" OnValidSubmit="SubmitAddSchedule">
             <DataAnnotationsValidator />
             <BbField>
@@ -27,7 +23,7 @@
             </BbField>
         </EditForm>
         <BbDialogFooter>
-            <BbButton Type="ButtonType.Submit" form="add-schedule-form">Add</BbButton>
+            <BbButton Type="ButtonType.Submit" form="add-schedule-form" Loading="_submitting">Add</BbButton>
         </BbDialogFooter>
     </BbDialogContent>
 </BbDialog>
@@ -35,6 +31,9 @@
 @code {
     [Inject]
     public required SsaApiClient Api { get; set; }
+
+    [Inject]
+    public required ToastService Toasts { get; set; }
 
     [Parameter]
     public EventCallback OnScheduleCreated { get; set; }
@@ -45,7 +44,7 @@
     private EditContext _editContext = null!;
     private ValidationMessageStore _validationMessageStore = null!;
 
-    private string? _error;
+    private bool _submitting;
 
     protected override void OnParametersSet()
     {
@@ -62,9 +61,9 @@
 
     private async Task SubmitAddSchedule()
     {
+        _submitting = true;
         try
         {
-            Console.WriteLine("Got here");
             var fieldId = new FieldIdentifier(_formState, nameof(_formState.CronExpression));
             _validationMessageStore.Clear(fieldId);
 
@@ -72,7 +71,6 @@
 
             if (!string.IsNullOrEmpty(cronMessage))
             {
-                Console.WriteLine("Adding validation message: " + cronMessage);
                 _validationMessageStore.Add(fieldId, cronMessage);
                 _editContext.NotifyValidationStateChanged();
                 return;
@@ -87,13 +85,18 @@
                 await OnScheduleCreated.InvokeAsync();
             }
 
+            Toasts.Success("Schedule added successfully");
             IsOpen = false;
 
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception e)
         {
-            _error = "Failed to add schedule: " + e.Message;
+            Toasts.Error("Failed to add schedule: " + e.Message);
+        }
+        finally
+        {
+            _submitting = false;
         }
     }
 

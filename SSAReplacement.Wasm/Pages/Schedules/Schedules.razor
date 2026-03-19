@@ -1,4 +1,4 @@
-﻿@page "/schedules"
+@page "/schedules"
 @using SSAReplacement.Wasm.Pages.Schedules.Modals
 
 @inject SsaApiClient Api
@@ -32,7 +32,7 @@
         <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CreatedAt.ToTimeAgo())" Header="Created" />
         <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions">
             <CellTemplate>
-                <BbButton Variant="@(context.IsEnabled? ButtonVariant.Secondary: ButtonVariant.Default)" Size="ButtonSize.Small" OnClick="() => ToggleEnabled(context)">@(context.IsEnabled ? "Disable" : "Enable")</BbButton>
+                <BbButton Variant="@(context.IsEnabled? ButtonVariant.Secondary: ButtonVariant.Default)" Size="ButtonSize.Small" OnClick="() => ToggleEnabled(context)" Loading="_togglingSchedule == context">@(context.IsEnabled ? "Disable" : "Enable")</BbButton>
             </CellTemplate>
         </BbDataTableColumn>
     </Columns>
@@ -49,6 +49,7 @@
 
     private bool _loading = true;
     private string? _error;
+    private Schedule? _togglingSchedule;
 
     private IEnumerable<Schedule> _filteredSchedules =>
         string.IsNullOrWhiteSpace(_searchQuery)
@@ -83,14 +84,20 @@
 
     private async Task ToggleEnabled(Schedule schedule)
     {
+        _togglingSchedule = schedule;
         try
         {
             await Api.Schedule.UpdateScheduleAsync(schedule.Id, new UpdateScheduleRequest(schedule.Name, schedule.CronExpression, !schedule.IsEnabled));
             schedule.IsEnabled = !schedule.IsEnabled;
+            Toasts.Success($"Schedule {(schedule.IsEnabled ? "enabled" : "disabled")} successfully");
         } 
         catch (Exception)
         {
             Toasts.Error("There was an error while updating the schedule");
+        }
+        finally
+        {
+            _togglingSchedule = null;
         }
     }
 }
