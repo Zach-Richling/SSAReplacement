@@ -10,6 +10,6 @@ public class ExecutableParameter
     public bool Required { get; set; }
     public string? DefaultValue { get; set; }
 
-    public ExecutableVersion Version { get; set; } = new();
+    public ExecutableVersion Version { get; set; } = null!;
 
 }

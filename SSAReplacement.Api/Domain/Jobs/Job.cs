@@ -9,7 +9,7 @@ public class Job
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? NotifyEmail { get; set; }
 
-    public Executable Executable { get; set; } = new();
+    public Executable Executable { get; set; } = null!;
     public ICollection<JobSchedule> JobSchedules { get; set; } = [];
     public ICollection<JobVariable> Variables { get; set; } = [];
     public ICollection<JobRun> Runs { get; set; } = [];
