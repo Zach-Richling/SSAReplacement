@@ -48,7 +48,12 @@ else
                             <CellTemplate Context="version">
                                 @if(!version.IsActive)
                                 {
-                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => SetActiveVersion(version.Id)" Loading="_activatingVersion">Activate</BbButton>
+                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => SetActiveVersion(version.Id)" Loading="_activatingVersion">
+                                        <Icon>
+                                            <LucideIcon Name="circle-check" Class="h-4 w-4" />
+                                        </Icon>
+                                        <ChildContent>Activate</ChildContent>
+                                    </BbButton>
                                 }
                             </CellTemplate>
                         </BbDataTableColumn>
@@ -83,7 +88,7 @@ else
 
 @code {
     [Parameter]
-    public int Id { get; set; }
+    public long Id { get; set; }
 
     [Inject]
     public required SsaApiClient Api { get; set; }
@@ -93,7 +98,7 @@ else
 
     [Inject]
     public required BreadcrumbService Breadcrumbs { get; set; }
-
+     
     [Inject]
     public required ToastService Toasts { get; set; }
 

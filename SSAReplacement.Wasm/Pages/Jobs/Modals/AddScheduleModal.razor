@@ -4,7 +4,12 @@
 
 <BbDialog @bind-Open="IsOpen">
     <BbDialogTrigger>
-        <BbButton>Add Schedule</BbButton>
+        <BbButton Size="ButtonSize.Small">
+            <Icon>
+                <LucideIcon Name="calendar-plus" Class="h-4 w-4" />
+            </Icon>
+            <ChildContent>Add Schedule</ChildContent>
+        </BbButton>
     </BbDialogTrigger>
     <BbDialogContent>
         <BbDialogHeader>
@@ -19,7 +24,12 @@
             </BbField>
         </EditForm>
         <BbDialogFooter>
-            <BbButton Type="ButtonType.Submit" form="add-job-schedule-form" Loading="_submitting">Add</BbButton>
+            <BbButton Type="ButtonType.Submit" form="add-job-schedule-form" Loading="_submitting" Size="ButtonSize.Small">
+                <Icon>
+                    <LucideIcon Name="plus" Class="h-4 w-4" />
+                </Icon>
+                <ChildContent>Add</ChildContent>
+            </BbButton>
         </BbDialogFooter>
     </BbDialogContent>
 </BbDialog>

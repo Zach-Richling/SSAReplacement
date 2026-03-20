@@ -26,7 +26,7 @@
             <BbPopover>
                 <BbPopoverTrigger>
                     <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Class="@(_jobFilter.IsEmpty ? null : "border-primary/60")">
-                        <LucideIcon Name="list-filter-plus" />
+                        <LucideIcon Name="list-filter-plus" Class="h-4 w-4" />
                         @if (!_jobFilter.IsEmpty)
                         {
                             <BbBadge Variant="BadgeVariant.Default" Class="ml-2 py-0 px-1.5 text-[10px]">@_jobFilter.TotalConditionCount</BbBadge>
@@ -87,8 +87,10 @@
         </BbDataGridTemplateColumn>
         <BbDataGridTemplateColumn TData="Job" Title="Actions">
             <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToJob(context.Id)">
-                <LucideIcon Name="eye" Class="h-4 w-4" />
-                View
+                <Icon>
+                    <LucideIcon Name="eye" Class="h-4 w-4" />
+                </Icon>
+                <ChildContent>View</ChildContent>
             </BbButton>
         </BbDataGridTemplateColumn>
     </Columns>

@@ -20,7 +20,7 @@
     <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
 }
 
-<BbDataTable Data="_schedules" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
+<BbDataTable Data="_filteredSchedules" TData="Schedule" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
     <Columns>
         <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.Name)" Header="Name"></BbDataTableColumn>
         <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => CronHelper.GetDescription(x.CronExpression))" Header="Frequency" />
@@ -32,13 +32,27 @@
         <BbDataTableColumn TData="Schedule" TValue="string" Property="@(x => x.CreatedAt.ToTimeAgo())" Header="Created" />
         <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions">
             <CellTemplate>
-                <BbButton Variant="@(context.IsEnabled? ButtonVariant.Secondary: ButtonVariant.Default)" Size="ButtonSize.Small" OnClick="() => ToggleEnabled(context)" Loading="_togglingSchedule == context">@(context.IsEnabled ? "Disable" : "Enable")</BbButton>
+                <BbButton Variant="@(context.IsEnabled? ButtonVariant.Secondary: ButtonVariant.Default)" Size="ButtonSize.Small" OnClick="() => ToggleEnabled(context)" Loading="_togglingSchedule == context" >
+                    <Icon>
+                        @if (context.IsEnabled)
+                        {
+                            <LucideIcon Name="power-off" Class="h-4 w-4" />
+                        }
+                        else
+                        {
+                            <LucideIcon Name="power" Class="h-4 w-4" />
+                        }
+                    </Icon>
+                    <ChildContent>
+                        @(context.IsEnabled ? "Disable" : "Enable")
+                    </ChildContent>
+                </BbButton>
             </CellTemplate>
         </BbDataTableColumn>
     </Columns>
     <EmptyTemplate>
         <tr class="flex flex-row justify-center">
-            <td colspan="4" class="p-4 text-center text-muted">No schedules found.</td>
+            <td colspan="5" class="p-4 text-center text-muted">No schedules found.</td>
         </tr>
     </EmptyTemplate>
 </BbDataTable>
@@ -87,6 +101,7 @@
         _togglingSchedule = schedule;
         try
         {
+            await Task.Delay(5000);
             await Api.Schedule.UpdateScheduleAsync(schedule.Id, new UpdateScheduleRequest(schedule.Name, schedule.CronExpression, !schedule.IsEnabled));
             schedule.IsEnabled = !schedule.IsEnabled;
             Toasts.Success($"Schedule {(schedule.IsEnabled ? "enabled" : "disabled")} successfully");

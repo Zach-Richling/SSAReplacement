@@ -34,7 +34,12 @@
         </BbDataTableColumn>
         <BbDataTableColumn TData="Executable" TValue="string" Header="Actions">
             <CellTemplate Context="executable">
-                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToExecutable(executable.Id)">View</BbButton>
+                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToExecutable(executable.Id)">
+                    <Icon>
+                        <LucideIcon Name="eye" Class="h-4 w-4" />
+                    </Icon>
+                    <ChildContent>View</ChildContent>
+                </BbButton>
             </CellTemplate>
         </BbDataTableColumn>
     </Columns>

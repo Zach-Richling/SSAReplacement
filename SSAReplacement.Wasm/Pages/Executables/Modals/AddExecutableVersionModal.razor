@@ -3,7 +3,12 @@
 
 <BbDialog @bind-Open="isOpen">
     <BbDialogTrigger>
-        <BbButton>Upload Executable Version</BbButton>
+        <BbButton Size="ButtonSize.Small">
+            <Icon>
+                <LucideIcon Name="upload" Class="h-4 w-4" />
+            </Icon>
+            <ChildContent>Upload Executable Version</ChildContent>
+        </BbButton>
     </BbDialogTrigger>
     <BbDialogContent>
         <BbDialogHeader>
@@ -23,7 +28,12 @@
 
         </EditForm>
         <BbDialogFooter>
-            <BbButton Type="ButtonType.Submit" form="add-executable-version-form" Loading="_submitting">Add</BbButton>
+            <BbButton Type="ButtonType.Submit" form="add-executable-version-form" Loading="_submitting" Size="ButtonSize.Small">
+                <Icon>
+                    <LucideIcon Name="plus" Class="h-4 w-4" />
+                </Icon>
+                <ChildContent>Add</ChildContent>
+            </BbButton>
         </BbDialogFooter>
     </BbDialogContent>
 </BbDialog>

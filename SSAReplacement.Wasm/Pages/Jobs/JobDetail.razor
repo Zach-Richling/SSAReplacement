@@ -25,8 +25,27 @@ else
             <BbCardHeader Class="flex flex-row justify-between items-center">
                 Job Details
                 <div>
-                    <BbButton OnClick="TriggerJobRun" Loading="_triggeringJob">Start</BbButton>
-                    <BbButton OnClick="ToggleEnabled" Class="ml-2" Loading="_togglingEnabled" Variant="@(_job.IsEnabled ? ButtonVariant.Secondary : ButtonVariant.Default)">@(_job.IsEnabled ? "Disable" : "Enable")</BbButton>
+                    <BbButton Size="ButtonSize.Small" OnClick="TriggerJobRun" Loading="_triggeringJob">
+                        <Icon>
+                            <LucideIcon Name="play" Class="h-4 w-4" />
+                        </Icon>
+                        <ChildContent>Start</ChildContent>
+                    </BbButton>
+                    <BbButton Size="ButtonSize.Small" OnClick="ToggleEnabled" Class="ml-2" Loading="_togglingEnabled" Variant="@(_job.IsEnabled ? ButtonVariant.Secondary : ButtonVariant.Default)">
+                        <Icon>
+                            @if (_job.IsEnabled)
+                            {
+                                <LucideIcon Name="power-off" Class="h-4 w-4" />
+                            }
+                            else
+                            {
+                                <LucideIcon Name="power" Class="h-4 w-4" />
+                            }
+                        </Icon>
+                        <ChildContent>
+                            @(_job.IsEnabled ? "Disable" : "Enable")
+                        </ChildContent>
+                    </BbButton>
                 </div>
             </BbCardHeader>
             <BbCardContent>
@@ -64,9 +83,14 @@ else
                                 <BbBadge Variant="@(schedule.IsEnabled? BadgeVariant.Default: BadgeVariant.Secondary)">@(schedule.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
                             </CellTemplate>
                         </BbDataTableColumn>
-                        <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions">
+                        <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions"> 
                             <CellTemplate Context="schedule">
-                                <BbButton Variant="ButtonVariant.Destructive" Size="ButtonSize.Small" OnClick="() => RemoveJobSchedule(schedule.Id)" Loading="_removingScheduleId == schedule.Id">Remove</BbButton>
+                                <BbButton Variant="ButtonVariant.Destructive" Size="ButtonSize.Small" OnClick="() => RemoveJobSchedule(schedule.Id)" Loading="_removingScheduleId == schedule.Id">
+                                    <Icon>
+                                        <LucideIcon Name="trash" Class="h-4 w-4" />
+                                    </Icon>
+                                    <ChildContent>Remove</ChildContent>
+                                </BbButton>
                             </CellTemplate>
                         </BbDataTableColumn>
                     </Columns>
@@ -133,7 +157,12 @@ else
                                 </BbDataTableColumn>
                                 <BbDataTableColumn TData="JobRun" TValue="string" Header="Actions">
                                     <CellTemplate Context="run">
-                                        <BbButton Size="ButtonSize.Small" Variant="ButtonVariant.Outline" OnClick="() => NavigateToRunDetail(run.Id)">View</BbButton>
+                                        <BbButton Size="ButtonSize.Small" Variant="ButtonVariant.Outline" OnClick="() => NavigateToRunDetail(run.Id)">
+                                            <Icon>
+                                                <LucideIcon Name="eye" Class="h-4 w-4" />
+                                            </Icon>
+                                            <ChildContent>View</ChildContent>
+                                        </BbButton>
                                     </CellTemplate>
                                 </BbDataTableColumn>
                             </Columns>
@@ -150,7 +179,12 @@ else
             <LucideIcon Name="save" Class="h-4 w-4 shrink-0" />
             <span>You have <strong>@UnsavedChangeCount</strong> unsaved changes</span>
             <BbButton Size="ButtonSize.Small" OnClick="SaveJobParameters" Loading="_savingParameters">
-                @(_savingParameters ? "Saving…" : "Save Changes")
+                <Icon>
+                    <LucideIcon Name="save" Class="h-4 w-4" />
+                </Icon>
+                <ChildContent>
+                    @(_savingParameters ? "Saving…" : "Save Changes")
+                </ChildContent>
             </BbButton>
         </div>
     }
