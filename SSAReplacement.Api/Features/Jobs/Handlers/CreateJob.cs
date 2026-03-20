@@ -24,6 +24,7 @@ public static class CreateJob
         db.Jobs.Add(job);
 
         await db.SaveChangesAsync();
+
         return Results.Created($"/jobs/{job.Id}", JobDto.From(job));
     }
 }

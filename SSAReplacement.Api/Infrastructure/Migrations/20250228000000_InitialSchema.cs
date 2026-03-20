@@ -7,18 +7,6 @@ public sealed class InitialSchema : Migration
 {
     public override void Up()
     {
-        Create.Table("Schedule")
-            .WithColumn("Id").AsInt32().PrimaryKey().Identity()
-            .WithColumn("Name").AsString(256).NotNullable()
-            .WithColumn("CronExpression").AsString(256).NotNullable()
-            .WithColumn("IsEnabled").AsBoolean().NotNullable()
-            .WithColumn("CreatedAt").AsDateTime2().NotNullable();
-
-        Create.Table("Executable")
-            .WithColumn("Id").AsInt32().PrimaryKey().Identity()
-            .WithColumn("Name").AsString(256).NotNullable()
-            .WithColumn("CreatedAt").AsDateTime2().NotNullable();
-
         Create.Table("Job")
             .WithColumn("Id").AsInt32().PrimaryKey().Identity()
             .WithColumn("ExecutableId").AsInt32().NotNullable()
@@ -26,19 +14,6 @@ public sealed class InitialSchema : Migration
             .WithColumn("IsEnabled").AsBoolean().NotNullable()
             .WithColumn("CreatedAt").AsDateTime2().NotNullable()
             .WithColumn("NotifyEmail").AsString(256).Nullable();
-
-        Create.Table("JobSchedule")
-            .WithColumn("Id").AsInt32().PrimaryKey().Identity()
-            .WithColumn("JobId").AsInt32().NotNullable()
-            .WithColumn("ScheduleId").AsInt32().NotNullable();
-
-        Create.Table("ExecutableVersion")
-            .WithColumn("Id").AsInt32().PrimaryKey().Identity()
-            .WithColumn("ExecutableId").AsInt32().NotNullable()
-            .WithColumn("Version").AsInt32().NotNullable()
-            .WithColumn("EntryPointDll").AsString(256).NotNullable()
-            .WithColumn("UploadedAt").AsDateTime2().NotNullable()
-            .WithColumn("IsActive").AsBoolean().NotNullable();
 
         Create.Table("JobVariable")
             .WithColumn("Id").AsInt32().PrimaryKey().Identity()
@@ -63,6 +38,31 @@ public sealed class InitialSchema : Migration
             .WithColumn("LogDate").AsDateTime2().NotNullable()
             .WithColumn("LogType").AsString(16).NotNullable()
             .WithColumn("Content").AsString().NotNullable();
+
+        Create.Table("JobSchedule")
+            .WithColumn("Id").AsInt32().PrimaryKey().Identity()
+            .WithColumn("JobId").AsInt32().NotNullable()
+            .WithColumn("ScheduleId").AsInt32().NotNullable();
+
+        Create.Table("Schedule")
+           .WithColumn("Id").AsInt32().PrimaryKey().Identity()
+           .WithColumn("Name").AsString(256).NotNullable()
+           .WithColumn("CronExpression").AsString(256).NotNullable()
+           .WithColumn("IsEnabled").AsBoolean().NotNullable()
+           .WithColumn("CreatedAt").AsDateTime2().NotNullable();
+
+        Create.Table("Executable")
+            .WithColumn("Id").AsInt32().PrimaryKey().Identity()
+            .WithColumn("Name").AsString(256).NotNullable()
+            .WithColumn("CreatedAt").AsDateTime2().NotNullable();
+
+        Create.Table("ExecutableVersion")
+            .WithColumn("Id").AsInt32().PrimaryKey().Identity()
+            .WithColumn("ExecutableId").AsInt32().NotNullable()
+            .WithColumn("Version").AsInt32().NotNullable()
+            .WithColumn("EntryPointDll").AsString(256).NotNullable()
+            .WithColumn("UploadedAt").AsDateTime2().NotNullable()
+            .WithColumn("IsActive").AsBoolean().NotNullable();
 
         Create.Table("ExecutableParameter")
             .WithColumn("Id").AsInt32().PrimaryKey().Identity()

@@ -10,6 +10,8 @@ public static class GetJobs
     {
         var list = await db.Jobs
             .AsNoTracking()
+            .Include(j => j.JobSchedules)
+                .ThenInclude(js => js.Schedule)
             .OrderBy(j => j.Id)
             .ToListAsync();
 

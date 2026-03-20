@@ -27,4 +27,28 @@ public static class ScheduleHelpers
             return "Invalid cron expression: " + ex.Message;
         }
     }
+
+    /// <summary>
+    /// Returns the next UTC occurrence after <paramref name="utcNow"/> for a valid cron expression, or null if invalid or none.
+    /// Supports 5-field and 6-field (with seconds) expressions, consistent with <see cref="ValidateCronExpression"/>.
+    /// </summary>
+    public static DateTime? TryGetNextOccurrenceUtc(string cronExpression, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(cronExpression))
+            return null;
+
+        try
+        {
+            var parts = cronExpression.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var expr = parts.Length == 6
+                ? CronExpression.Parse(cronExpression, CronFormat.IncludeSeconds)
+                : CronExpression.Parse(cronExpression);
+
+            return expr.GetNextOccurrence(utcNow, TimeZoneInfo.Local);
+        }
+        catch (CronFormatException)
+        {
+            return null;
+        }
+    }
 }

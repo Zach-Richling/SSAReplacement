@@ -34,9 +34,10 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<Job>(b =>
         {
             b.HasKey(j => j.Id);
-            b.HasOne(e => e.Executable).WithMany(x => x.Jobs).HasForeignKey(e => e.ExecutableId);
+            b.HasOne(j => j.Executable).WithMany(e => e.Jobs).HasForeignKey(e => e.ExecutableId);
             b.HasMany(j => j.JobSchedules).WithOne(js => js.Job).HasForeignKey(js => js.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(j => j.Variables).WithOne(v => v.Job).HasForeignKey(v => v.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+            b.HasMany(j => j.Runs).WithOne(jr => jr.Job).HasForeignKey(jr => jr.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<JobSchedule>(b =>
@@ -47,6 +48,7 @@ public sealed class AppDbContext : DbContext
 
         modelBuilder.Entity<JobRun>(b =>
         {
+            b.HasKey(jr => jr.Id);
             b.HasOne(e => e.Job).WithMany(j => j.Runs).HasForeignKey(e => e.JobId);
             b.HasOne(e => e.ExecutableVersion).WithMany(v => v.JobRuns).HasForeignKey(e => e.ExecutableVersionId);
             b.HasOne(e => e.Schedule).WithMany(s => s.JobRuns).HasForeignKey(e => e.ScheduleId);
@@ -60,6 +62,7 @@ public sealed class AppDbContext : DbContext
 
         modelBuilder.Entity<JobLog>(b =>
         {
+            b.HasKey(jl => jl.Id);
             b.HasOne(e => e.JobRun).WithMany(r => r.Logs).HasForeignKey(e => e.JobRunId);
         });
 

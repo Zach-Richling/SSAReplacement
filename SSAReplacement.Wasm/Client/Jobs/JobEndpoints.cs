@@ -128,4 +128,16 @@ public class JobEndpoints(HttpClient http)
         var res = await http.PutAsJsonAsync($"jobs/{jobId}", request, cancellationToken);
         res.EnsureSuccessStatusCode();
     }
+
+    /// <summary>
+    /// DELETE /jobs/{id}. Removes the job.
+    /// </summary>
+    public async Task DeleteJobAsync(int jobId, CancellationToken cancellationToken = default)
+    {
+        var res = await http.DeleteAsync($"jobs/{jobId}", cancellationToken);
+        if (res.StatusCode == HttpStatusCode.NotFound)
+            return;
+
+        res.EnsureSuccessStatusCode();
+    }
 }

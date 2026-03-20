@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SSAReplacement.Api.Features.Jobs.Domain;
 using SSAReplacement.Api.Infrastructure;
 
@@ -21,6 +22,12 @@ public static class UpdateJob
 
         await db.SaveChangesAsync();
 
-        return Results.Ok(JobDto.From(j));
+        var reloaded = await db.Jobs
+            .AsNoTracking()
+            .Include(x => x.JobSchedules)
+                .ThenInclude(js => js.Schedule)
+            .FirstAsync(x => x.Id == id);
+
+        return Results.Ok(JobDto.From(reloaded));
     }
 }

@@ -9,4 +9,5 @@ public record Job(
     string Name,
     bool IsEnabled,
     DateTime CreatedAt,
-    string? NotifyEmail);
+    string? NotifyEmail,
+    DateTime? NextRunUtc);

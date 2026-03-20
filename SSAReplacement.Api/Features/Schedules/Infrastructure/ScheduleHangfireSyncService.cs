@@ -25,7 +25,10 @@ public sealed class ScheduleHangfireSyncService(
         foreach (var s in schedules)
         {
             if (s.IsEnabled)
-                jobManager.AddOrUpdate<ScheduleRunnerService>($"schedule-{s.Id}", x => x.RunScheduleAsync(s.Id, CancellationToken.None), s.CronExpression);
+                jobManager.AddOrUpdate<ScheduleRunnerService>($"schedule-{s.Id}", x => x.RunScheduleAsync(s.Id, CancellationToken.None), s.CronExpression, new RecurringJobOptions()
+                {
+                    TimeZone = TimeZoneInfo.Local
+                });
             else
                 jobManager.RemoveIfExists($"schedule-{s.Id}");
         }
@@ -34,7 +37,10 @@ public sealed class ScheduleHangfireSyncService(
     public Task AddOrUpdateScheduleAsync(int scheduleId, string cronExpression, bool isEnabled, CancellationToken cancellationToken = default)
     {
         if (isEnabled)
-            jobManager.AddOrUpdate<ScheduleRunnerService>($"schedule-{scheduleId}", x => x.RunScheduleAsync(scheduleId, CancellationToken.None), cronExpression);
+            jobManager.AddOrUpdate<ScheduleRunnerService>($"schedule-{scheduleId}", x => x.RunScheduleAsync(scheduleId, CancellationToken.None), cronExpression, new RecurringJobOptions()
+            {
+                TimeZone = TimeZoneInfo.Local
+            });
         else
             jobManager.RemoveIfExists($"schedule-{scheduleId}");
 

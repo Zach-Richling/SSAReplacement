@@ -1,83 +1,142 @@
-﻿@page "/jobs"
-@using BlazorBlueprint.Primitives.Table
+@page "/jobs"
+
 @using SSAReplacement.Wasm.Pages.Jobs.Modals
+@using BlazorBlueprint.Primitives.Filtering
 
 @inject SsaApiClient Api
 @inject NavigationManager Nav
+@inject BreadcrumbService Breadcrumbs
+@inject ToastService Toasts
+@inject DialogService Dialogs
 
 <PageTitle>Jobs</PageTitle>
-
-<div class="flex flex-row justify-between items-center">
-    <h1 class="text-lg font-semibold m-0">Jobs</h1>
-    <div class="flex items-center flex-1" style="max-width: 20rem;">
-        <SearchBar @bind-Value="_searchQuery" AriaLabel="Filter jobs by name" />
-    </div>
-    <AddJobModal OnJobCreated="LoadData"/>
-</div>
-
 
 @if (_error is not null)
 {
     <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
 }
 
-<BbDataTable Data="@_sortedJobs" TData="Job" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
+<div class="flex w-full items-center gap-3">
+    <div class="flex-1 min-w-0 flex justify-start">
+        Jobs
+    </div>
+    <div class="flex flex-wrap items-center justify-center gap-3 shrink-0">
+        <div class="flex items-center w-full max-w-md min-w-[12rem] gap-3">
+            <SearchBar @bind-Value="_searchQuery" AriaLabel="Search jobs by name" />
+            <BbPopover>
+                <BbPopoverTrigger>
+                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Class="@(_jobFilter.IsEmpty ? null : "border-primary/60")">
+                        <LucideIcon Name="list-filter-plus" />
+                        @if (!_jobFilter.IsEmpty)
+                        {
+                            <BbBadge Variant="BadgeVariant.Default" Class="ml-2 py-0 px-1.5 text-[10px]">@_jobFilter.TotalConditionCount</BbBadge>
+                        }
+                    </BbButton>
+                </BbPopoverTrigger>
+                <BbPopoverContent Class="w-[min(100vw-2rem,26rem)] overflow-y-auto">
+                    <BbFilterBuilder @bind-Filter="_jobFilter" Fields="_jobFilterFields" Compact OnFilterChanged="() => _gridState.Selection.Clear()" />
+                </BbPopoverContent>
+            </BbPopover>
+        </div>
+    </div>
+    <div class="flex-1 min-w-0 flex justify-end items-center">
+        <AddJobModal OnJobCreated="LoadData" />
+    </div>
+</div>
+
+<BbDataGrid TData="Job"
+            Items="@_displayJobs"
+            @bind-State="_gridState"
+            ItemKey="@(j => j.Id)"
+            IsLoading="@_loading"
+            Resizable
+            StickyHeader
+            SelectionMode="DataTableSelectionMode.Multiple">
+    <Toolbar>
+            <div class="flex flex-wrap w-full items-center gap-2 w-full border-t border-border pt-4">
+                @if (_gridState.TotalSelected > 0)
+                {
+                    <span class="text-sm text-muted-foreground">@_gridState.TotalSelected selected</span>
+                }
+                else
+                {
+                    <span class="text-sm text-muted-foreground">No rows selected</span>
+                }
+                <div class="flex flex-wrap items-center gap-2 ml-auto">
+                    <BbButton Variant="ButtonVariant.Outline"
+                              Size="ButtonSize.Small"
+                              Disabled="@(_gridState.TotalSelected == 0 || _bulkDisableBusy)"
+                              Loading="_bulkDisableBusy"
+                              OnClick="DisableSelectedAsync">
+                        Disable selected
+                    </BbButton>
+                    <BbButton Variant="ButtonVariant.Destructive"
+                              Size="ButtonSize.Small"
+                              Disabled="@(_gridState.TotalSelected == 0 || _deleting)"
+                              Loading="_deleting"
+                              OnClick="DeleteSelectedAsync">
+                        Delete selected
+                    </BbButton>
+                </div>
+            </div>
+    </Toolbar>
     <Columns>
-        <BbDataTableColumn TData="Job" TValue="string" Property="@(x => x.Name)" Header="Job Name" Sortable></BbDataTableColumn>
-        <BbDataTableColumn TData="Job" TValue="bool" Property="@(x => x.IsEnabled)" Header="Enabled" Sortable>
-            <CellTemplate Context="job">
-                <BbBadge Variant="@(job.IsEnabled ? BadgeVariant.Default : BadgeVariant.Secondary)">@(job.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
-            </CellTemplate>
-        </BbDataTableColumn>
-        <BbDataTableColumn TData="Job" TValue="DateTime" Property="@(x => x.CreatedAt)" Header="Created" Sortable>
-            <CellTemplate Context="job">
-                @job.CreatedAt.ToTimeAgo()
-            </CellTemplate>
-        </BbDataTableColumn>
-        <BbDataTableColumn TData="Job" TValue="string" Header="Actions">
-            <CellTemplate Context="job">
-                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToJob(job.Id)">View</BbButton>
-            </CellTemplate>
-        </BbDataTableColumn>
+        <BbDataGridSelectColumn TData="Job" Pinned="BlazorBlueprint.Primitives.DataGrid.ColumnPinning.Left" />
+        <BbDataGridPropertyColumn TData="Job" TProp="string" Property="@(x => x.Name)" Title="Job Name" Sortable />
+        <BbDataGridTemplateColumn TData="Job" Title="Enabled" Sortable SortBy="@(x => x.IsEnabled)">
+            <BbBadge Variant="@(context.IsEnabled ? BadgeVariant.Default : BadgeVariant.Secondary)">@(context.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
+        </BbDataGridTemplateColumn>
+        <BbDataGridTemplateColumn TData="Job" Title="Next run" Sortable SortBy="@(x => x.NextRunUtc)">
+            @(context.NextRunUtc is DateTime dt ? dt.ToLocalTime().ToString("g") : "-")
+        </BbDataGridTemplateColumn>
+        <BbDataGridTemplateColumn TData="Job" Title="Created" Sortable SortBy="@(x => x.CreatedAt)">
+            @context.CreatedAt.ToTimeAgo()
+        </BbDataGridTemplateColumn>
+        <BbDataGridTemplateColumn TData="Job" Title="Actions">
+            <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToJob(context.Id)">View</BbButton>
+        </BbDataGridTemplateColumn>
     </Columns>
-    <EmptyTemplate>
-        <tr class="flex flex-row justify-center">
-            <td colspan="4" class="p-4 text-center text-muted">No jobs found.</td>
-        </tr>
-    </EmptyTemplate>
-</BbDataTable>
+</BbDataGrid>
 
 @code {
-    [Inject]
-    public required BreadcrumbService Breadcrumbs { get; set; }
+    private BlazorBlueprint.Primitives.DataGrid.DataGridState<Job> _gridState = new();
 
     private List<Job> _jobs = [];
 
     private string _searchQuery = "";
-    private string _sortColumn = "name";
-    private bool _sortAsc = true;
+    private FilterDefinition _jobFilter = new();
+
+    private readonly FilterField[] _jobFilterFields =
+    [
+        new FilterField { Name = nameof(Job.NextRunUtc), Label = "Next run", Type = FilterFieldType.DateTime }
+    ];
 
     private bool _loading = true;
     private string? _error;
 
-    private IEnumerable<Job> _filteredJobs =>
-        string.IsNullOrWhiteSpace(_searchQuery)
-            ? _jobs
-            : _jobs.Where(j => j.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+    private bool _deleting;
+    private bool _bulkDisableBusy;
 
-    private IEnumerable<Job> _sortedJobs =>
-        _sortColumn switch
-        {
-            "name" => _sortAsc ? _filteredJobs.OrderBy(j => j.Name) : _filteredJobs.OrderByDescending(j => j.Name),
-            "isEnabled" => _sortAsc ? _filteredJobs.OrderBy(j => j.IsEnabled) : _filteredJobs.OrderByDescending(j => j.IsEnabled),
-            _ => _filteredJobs
-        };
-
-    protected override async Task OnInitializedAsync() 
+    private IEnumerable<Job> _displayJobs
     {
-        Breadcrumbs.Set(new BreadcrumbItem() { Text = "Jobs" });
-        await LoadData(); 
+        get
+        {
+            IEnumerable<Job> q = _jobs;
+
+            if (!string.IsNullOrWhiteSpace(_searchQuery))
+                q = q.Where(j => j.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+            if (!_jobFilter.IsEmpty)
+            {
+                var predicate = _jobFilter.ToFunc<Job>(_jobFilterFields);
+                q = q.Where(predicate);
+            }
+
+            return q;
+        }
     }
+
+    protected override async Task OnInitializedAsync() => await LoadData();
 
     private async Task LoadData()
     {
@@ -93,11 +152,90 @@
             _error = "Failed to load: " + ex.Message;
             _jobs = [];
         }
-        finally 
-        { 
-            _loading = false; 
+        finally
+        {
+            _loading = false;
         }
     }
 
     private void NavigateToJob(int jobId) => Nav.NavigateTo($"/jobs/{jobId}");
+
+    private async Task DisableSelectedAsync()
+    {
+        var selected = _gridState.Selection.SelectedItems.ToList();
+        var toDisable = selected.Where(j => j.IsEnabled).ToList();
+
+        if (toDisable.Count == 0)
+        {
+            Toasts.Success(selected.Count == 0 ? "Select at least one job." : "Selected jobs are already disabled.");
+            return;
+        }
+
+        _bulkDisableBusy = true;
+
+        try
+        {
+            foreach (var job in toDisable)
+                await Api.Job.UpdateJobAsync(job.Id, new UpdateJobRequest(job.Name, false, job.NotifyEmail));
+
+            Toasts.Success($"Disabled {toDisable.Count} job(s).");
+
+            await LoadData();
+
+            _gridState.Selection.Clear();
+        }
+        catch (Exception ex)
+        {
+            Toasts.Error("Failed to disable jobs: " + ex.Message);
+        }
+        finally
+        {
+            _bulkDisableBusy = false;
+        }
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        if (_gridState.TotalSelected == 0)
+            return;
+
+        var selected = _gridState.Selection.SelectedItems;
+
+        var confirm = await Dialogs.ConfirmAsync(
+            "Delete jobs?",
+            $"Delete {selected.Count} job(s)? This cannot be undone.",
+            new ConfirmDialogOptions { Destructive = true });
+
+        if (!confirm.Confirmed)
+            return;
+
+        _deleting = true;
+        try
+        {
+            var deleted = 0;
+            foreach (var job in selected)
+            {
+                await Api.Job.DeleteJobAsync(job.Id);
+                deleted++;
+            }
+
+            Toasts.Success($"Deleted {deleted} job(s).");
+            await LoadData();
+
+            _gridState.Selection.Clear();
+        }
+        catch (Exception ex)
+        {
+            Toasts.Error("Failed to delete jobs: " + ex.Message);
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        Breadcrumbs.Set(new BreadcrumbItem() { Text = "Jobs" });
+    }
 }
