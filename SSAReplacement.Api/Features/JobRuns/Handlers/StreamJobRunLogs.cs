@@ -11,8 +11,8 @@ namespace SSAReplacement.Api.Features.JobRuns.Handlers;
 public static class StreamJobRunLogs
 {
     public static async Task<IResult> Handler(
-        int id,
-        [FromHeader(Name = "Last-Event-ID")] int? lastEventId,
+        long id,
+        [FromHeader(Name = "Last-Event-ID")] long? lastEventId,
         IServiceScopeFactory scopeFactory,
         CancellationToken cancellationToken)
     {
@@ -37,8 +37,8 @@ public static class StreamJobRunLogs
     }
 
     private static async IAsyncEnumerable<SseItem<JobLogDto>> StreamJobLogsAsync(
-        int id,
-        int lastSeenId,
+        long id,
+        long lastSeenId,
         IServiceScopeFactory scopeFactory,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {

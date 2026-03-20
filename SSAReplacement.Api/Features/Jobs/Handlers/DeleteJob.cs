@@ -4,7 +4,7 @@ namespace SSAReplacement.Api.Features.Jobs.Handlers;
 
 public static class DeleteJob
 {
-    public static async Task<IResult> Handler(int id, AppDbContext db)
+    public static async Task<IResult> Handler(long id, AppDbContext db)
     {
         var j = await db.Jobs.FindAsync(id);
 

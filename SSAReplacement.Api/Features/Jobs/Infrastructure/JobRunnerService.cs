@@ -21,7 +21,7 @@ public sealed class JobRunnerService(
     public const string TriggerScheduled = "Scheduled";
     public const string TriggerManual = "Manual";
 
-    public async Task RunAsync(int jobId, int? scheduleId = null, CancellationToken cancellationToken = default)
+    public async Task RunAsync(long jobId, long? scheduleId = null, CancellationToken cancellationToken = default)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

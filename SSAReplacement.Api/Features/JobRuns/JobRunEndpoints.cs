@@ -8,8 +8,8 @@ public static class JobRunEndpoints
     {
         var group = app.MapGroup("/runs").WithTags("Job Runs");
 
-        group.MapGet("/{id:int}", GetJobRunById.Handler);
-        group.MapGet("/{id:int}/logs", GetJobRunLogs.Handler);
-        group.MapGet("/{id:int}/logs/stream", StreamJobRunLogs.Handler);
+        group.MapGet("/{id:long}", GetJobRunById.Handler);
+        group.MapGet("/{id:long}/logs", GetJobRunLogs.Handler);
+        group.MapGet("/{id:long}/logs/stream", StreamJobRunLogs.Handler);
     }
 }

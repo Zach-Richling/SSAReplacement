@@ -6,7 +6,7 @@ namespace SSAReplacement.Api.Features.Executables.Handlers;
 
 public static class GetExecutableById
 {
-    public static async Task<IResult> Handler(int id, AppDbContext db)
+    public static async Task<IResult> Handler(long id, AppDbContext db)
     {
         var exe = await db.Executables
             .AsNoTracking()

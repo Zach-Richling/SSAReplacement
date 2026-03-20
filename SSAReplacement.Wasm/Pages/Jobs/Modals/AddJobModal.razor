@@ -17,7 +17,7 @@
             </BbField>
             <BbField Class="mt-4" Orientation="FieldOrientation.Responsive">
                 <BbFieldLabel For="executable-id">Executable</BbFieldLabel>
-                <BbCombobox TValue="int" Options="_selectOptions" @bind-Value="_formState.SelectedExecutableId" />
+                <BbCombobox TValue="long" Options="_selectOptions" @bind-Value="_formState.SelectedExecutableId" />
                 <ValidationMessage For="() => _formState.SelectedExecutableId" />
             </BbField>
         </EditForm>
@@ -42,7 +42,7 @@
     private AddJobFormState _formState = new();
 
     private List<Executable> _executables = [];
-    private List<SelectOption<int>> _selectOptions => _executables.Select(e => new SelectOption<int>(e.Id, e.Name)).ToList();
+    private List<SelectOption<long>> _selectOptions => _executables.Select(e => new SelectOption<long>(e.Id, e.Name)).ToList();
 
     private bool _submitting;
 
@@ -92,7 +92,7 @@
         [Required(ErrorMessage = "Please enter a job name")]
         public string Name { get; set; } = "";
 
-        [Range(1, double.MaxValue, ErrorMessage = "Please select an executable.")]
-        public int SelectedExecutableId { get; set; }
+        [Range(1L, long.MaxValue, ErrorMessage = "Please select an executable.")]
+        public long SelectedExecutableId { get; set; }
     }
 }

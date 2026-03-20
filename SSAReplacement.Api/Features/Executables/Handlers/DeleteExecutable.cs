@@ -5,7 +5,7 @@ namespace SSAReplacement.Api.Features.Executables.Handlers;
 
 public static class DeleteExecutable
 {
-    public static async Task<IResult> Handler(int id, AppDbContext db)
+    public static async Task<IResult> Handler(long id, AppDbContext db)
     {
         var exe = await db.Executables.FindAsync(id);
 

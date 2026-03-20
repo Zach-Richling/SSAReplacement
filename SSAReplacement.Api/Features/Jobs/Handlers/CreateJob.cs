@@ -6,7 +6,7 @@ namespace SSAReplacement.Api.Features.Jobs.Handlers;
 
 public static class CreateJob
 {
-    public record Request(int ExecutableId, string Name, bool IsEnabled = true, string? NotifyEmail = null);
+    public record Request(long ExecutableId, string Name, bool IsEnabled = true, string? NotifyEmail = null);
 
     public static async Task<IResult> Handler(Request req, AppDbContext db)
     {

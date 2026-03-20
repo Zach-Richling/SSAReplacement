@@ -10,7 +10,7 @@ public sealed class ScheduleRunnerService(
     IBackgroundJobClient jobClient,
     ILogger<ScheduleRunnerService> logger)
 {
-    public async Task RunScheduleAsync(int scheduleId, CancellationToken cancellationToken = default)
+    public async Task RunScheduleAsync(long scheduleId, CancellationToken cancellationToken = default)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

@@ -5,10 +5,10 @@ namespace SSAReplacement.Wasm.Client.Jobs;
 /// </summary>
 public record JobRun
 {
-    public int Id { get; set; }
-    public int JobId { get; set; }
-    public int ExecutableVersionId { get; set; }
-    public int? ScheduleId { get; set; }
+    public long Id { get; set; }
+    public long JobId { get; set; }
+    public long ExecutableVersionId { get; set; }
+    public long? ScheduleId { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
     public string Status { get; set; } = "";

@@ -9,9 +9,9 @@ public static class ExecutableEndpoints
         var group = app.MapGroup("/executables").WithTags("Executables");
 
         group.MapGet("/", GetExecutables.Handler);
-        group.MapGet("/{id:int}", GetExecutableById.Handler);
+        group.MapGet("/{id:long}", GetExecutableById.Handler);
         group.MapPost("/", CreateExecutable.Handler);
-        group.MapPut("/{id:int}", UpdateExecutable.Handler);
-        group.MapDelete("/{id:int}", DeleteExecutable.Handler);
+        group.MapPut("/{id:long}", UpdateExecutable.Handler);
+        group.MapDelete("/{id:long}", DeleteExecutable.Handler);
     }
 }

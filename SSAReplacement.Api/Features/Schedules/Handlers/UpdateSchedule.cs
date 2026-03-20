@@ -8,7 +8,7 @@ public static class UpdateSchedule
 {
     public record Request(string? Name, string? CronExpression, bool? IsEnabled);
 
-    public static async Task<IResult> Handler(int id, Request req, AppDbContext db, IScheduleHangfireSyncService sync)
+    public static async Task<IResult> Handler(long id, Request req, AppDbContext db, IScheduleHangfireSyncService sync)
     {
         if (!string.IsNullOrEmpty(req.CronExpression))
         {

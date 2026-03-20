@@ -8,8 +8,8 @@ namespace SSAReplacement.Api.Features.Schedules.Infrastructure;
 public interface IScheduleHangfireSyncService
 {
     Task SyncAllSchedulesAsync(CancellationToken cancellationToken = default);
-    Task AddOrUpdateScheduleAsync(int scheduleId, string cronExpression, bool isEnabled, CancellationToken cancellationToken = default);
-    Task RemoveScheduleAsync(int scheduleId, CancellationToken cancellationToken = default);
+    Task AddOrUpdateScheduleAsync(long scheduleId, string cronExpression, bool isEnabled, CancellationToken cancellationToken = default);
+    Task RemoveScheduleAsync(long scheduleId, CancellationToken cancellationToken = default);
 }
 
 public sealed class ScheduleHangfireSyncService(
@@ -34,7 +34,7 @@ public sealed class ScheduleHangfireSyncService(
         }
     }
 
-    public Task AddOrUpdateScheduleAsync(int scheduleId, string cronExpression, bool isEnabled, CancellationToken cancellationToken = default)
+    public Task AddOrUpdateScheduleAsync(long scheduleId, string cronExpression, bool isEnabled, CancellationToken cancellationToken = default)
     {
         if (isEnabled)
             jobManager.AddOrUpdate<ScheduleRunnerService>($"schedule-{scheduleId}", x => x.RunScheduleAsync(scheduleId, CancellationToken.None), cronExpression, new RecurringJobOptions()
@@ -47,7 +47,7 @@ public sealed class ScheduleHangfireSyncService(
         return Task.CompletedTask;
     }
 
-    public Task RemoveScheduleAsync(int scheduleId, CancellationToken cancellationToken = default)
+    public Task RemoveScheduleAsync(long scheduleId, CancellationToken cancellationToken = default)
     {
         jobManager.RemoveIfExists($"schedule-{scheduleId}");
         return Task.CompletedTask;

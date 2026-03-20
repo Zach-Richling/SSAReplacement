@@ -2,8 +2,8 @@
 
 public class JobLog
 {
-    public int Id { get; set; }
-    public int JobRunId { get; set; }
+    public long Id { get; set; }
+    public long JobRunId { get; set; }
     public DateTime LogDate { get; set; }
     public string LogType { get; set; } = "";
     public string Content { get; set; } = "";

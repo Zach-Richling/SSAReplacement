@@ -33,13 +33,34 @@
                         }
                     </BbButton>
                 </BbPopoverTrigger>
-                <BbPopoverContent Class="w-[min(100vw-2rem,26rem)] overflow-y-auto">
+                <BbPopoverContent Class="w-[100vw-2rem] overflow-y-auto">
                     <BbFilterBuilder @bind-Filter="_jobFilter" Fields="_jobFilterFields" Compact OnFilterChanged="() => _gridState.Selection.Clear()" />
                 </BbPopoverContent>
             </BbPopover>
         </div>
     </div>
-    <div class="flex-1 min-w-0 flex justify-end items-center">
+    <div class="flex-1 min-w-0 flex justify-end items-center gap-3">
+        <BbSplitButton Size="ButtonSize.Small" Variant="ButtonVariant.Outline" Disabled="@(_gridState.TotalSelected == 0)">
+            <ChildContent>
+                <span class="text-sm">@(_gridState.TotalSelected > 0 ? $"{_gridState.TotalSelected} selected" : "No rows selected")</span>
+            </ChildContent>
+            <DropdownContent>
+                <BbSplitButtonItem Disabled="@(_gridState.TotalSelected == 0 || _bulkToggleBusy)" OnClick="() => ToggleSelectedEnabledAsync(true)">
+                    <LucideIcon Name="power" Class="mr-2 h-4 w-4" />
+                    Enable Selected
+                </BbSplitButtonItem>
+                <BbSplitButtonSeparator />
+                <BbSplitButtonItem Class="text-secondary" Disabled="@(_gridState.TotalSelected == 0 || _bulkToggleBusy)" OnClick="() => ToggleSelectedEnabledAsync(false)">
+                    <LucideIcon Name="power-off" Class="mr-2 h-4 w-4" />
+                    Disable Selected
+                </BbSplitButtonItem>
+                <BbSplitButtonSeparator />
+                <BbSplitButtonItem Class="text-destructive" Disabled="@(_gridState.TotalSelected == 0 || _deleting)" OnClick="DeleteSelectedAsync">
+                    <LucideIcon Name="trash" Class="mr-2 h-4 w-4" />
+                    Delete Selected
+                </BbSplitButtonItem>
+            </DropdownContent>
+        </BbSplitButton>
         <AddJobModal OnJobCreated="LoadData" />
     </div>
 </div>
@@ -52,34 +73,6 @@
             Resizable
             StickyHeader
             SelectionMode="DataTableSelectionMode.Multiple">
-    <Toolbar>
-            <div class="flex flex-wrap w-full items-center gap-2 w-full border-t border-border pt-4">
-                @if (_gridState.TotalSelected > 0)
-                {
-                    <span class="text-sm text-muted-foreground">@_gridState.TotalSelected selected</span>
-                }
-                else
-                {
-                    <span class="text-sm text-muted-foreground">No rows selected</span>
-                }
-                <div class="flex flex-wrap items-center gap-2 ml-auto">
-                    <BbButton Variant="ButtonVariant.Outline"
-                              Size="ButtonSize.Small"
-                              Disabled="@(_gridState.TotalSelected == 0 || _bulkDisableBusy)"
-                              Loading="_bulkDisableBusy"
-                              OnClick="DisableSelectedAsync">
-                        Disable selected
-                    </BbButton>
-                    <BbButton Variant="ButtonVariant.Destructive"
-                              Size="ButtonSize.Small"
-                              Disabled="@(_gridState.TotalSelected == 0 || _deleting)"
-                              Loading="_deleting"
-                              OnClick="DeleteSelectedAsync">
-                        Delete selected
-                    </BbButton>
-                </div>
-            </div>
-    </Toolbar>
     <Columns>
         <BbDataGridSelectColumn TData="Job" Pinned="BlazorBlueprint.Primitives.DataGrid.ColumnPinning.Left" />
         <BbDataGridPropertyColumn TData="Job" TProp="string" Property="@(x => x.Name)" Title="Job Name" Sortable />
@@ -87,15 +80,23 @@
             <BbBadge Variant="@(context.IsEnabled ? BadgeVariant.Default : BadgeVariant.Secondary)">@(context.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
         </BbDataGridTemplateColumn>
         <BbDataGridTemplateColumn TData="Job" Title="Next run" Sortable SortBy="@(x => x.NextRunUtc)">
-            @(context.NextRunUtc is DateTime dt ? dt.ToLocalTime().ToString("g") : "-")
+            @(context.NextRunLocal is DateTime dt ? dt.ToString("g") : "-")
         </BbDataGridTemplateColumn>
         <BbDataGridTemplateColumn TData="Job" Title="Created" Sortable SortBy="@(x => x.CreatedAt)">
             @context.CreatedAt.ToTimeAgo()
         </BbDataGridTemplateColumn>
         <BbDataGridTemplateColumn TData="Job" Title="Actions">
-            <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToJob(context.Id)">View</BbButton>
+            <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToJob(context.Id)">
+                <LucideIcon Name="eye" Class="h-4 w-4" />
+                View
+            </BbButton>
         </BbDataGridTemplateColumn>
     </Columns>
+    <EmptyTemplate>
+        <div class="flex flex-row justify-center rounded-md border mt-4">
+            <span class="p-4 text-center text-muted">No jobs found.</span>
+        </div>
+    </EmptyTemplate>
 </BbDataGrid>
 
 @code {
@@ -108,14 +109,15 @@
 
     private readonly FilterField[] _jobFilterFields =
     [
-        new FilterField { Name = nameof(Job.NextRunUtc), Label = "Next run", Type = FilterFieldType.DateTime }
+        new FilterField { Name = nameof(Job.NextRunLocal), Label = "Next Run", Type = FilterFieldType.DateTime },
+        new FilterField { Name = nameof(Job.IsEnabled), Label = "Enabled", Type = FilterFieldType.Boolean }
     ];
 
     private bool _loading = true;
     private string? _error;
 
     private bool _deleting;
-    private bool _bulkDisableBusy;
+    private bool _bulkToggleBusy;
 
     private IEnumerable<Job> _displayJobs
     {
@@ -158,27 +160,29 @@
         }
     }
 
-    private void NavigateToJob(int jobId) => Nav.NavigateTo($"/jobs/{jobId}");
+    private void NavigateToJob(long jobId) => Nav.NavigateTo($"/jobs/{jobId}");
 
-    private async Task DisableSelectedAsync()
+    private async Task ToggleSelectedEnabledAsync(bool toggleDirection)
     {
         var selected = _gridState.Selection.SelectedItems.ToList();
-        var toDisable = selected.Where(j => j.IsEnabled).ToList();
+        var toToggle = selected.Where(j => j.IsEnabled != toggleDirection).ToList();
 
-        if (toDisable.Count == 0)
+        if (toToggle.Count == 0)
         {
-            Toasts.Success(selected.Count == 0 ? "Select at least one job." : "Selected jobs are already disabled.");
+            var toggleText = toggleDirection ? "enabled" : "disabled";
+            Toasts.Success(selected.Count == 0 ? "Select at least one job." : $"Selected jobs are already {toggleText}.");
             return;
         }
 
-        _bulkDisableBusy = true;
+        _bulkToggleBusy = true;
 
         try
         {
-            foreach (var job in toDisable)
-                await Api.Job.UpdateJobAsync(job.Id, new UpdateJobRequest(job.Name, false, job.NotifyEmail));
+            foreach (var job in toToggle)
+                await Api.Job.UpdateJobAsync(job.Id, new UpdateJobRequest(job.Name, toggleDirection, job.NotifyEmail));
 
-            Toasts.Success($"Disabled {toDisable.Count} job(s).");
+            var toggleText = toggleDirection ? "Enabled" : "Disabled";
+            Toasts.Success($"{toggleText} {toToggle.Count} job(s).");
 
             await LoadData();
 
@@ -186,11 +190,12 @@
         }
         catch (Exception ex)
         {
-            Toasts.Error("Failed to disable jobs: " + ex.Message);
+            var toggleText = toggleDirection ? "enable" : "disable";
+            Toasts.Error($"Failed to {toggleText} jobs: {ex.Message}");
         }
         finally
         {
-            _bulkDisableBusy = false;
+            _bulkToggleBusy = false;
         }
     }
 

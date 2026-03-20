@@ -3,14 +3,14 @@ using SSAReplacement.Api.Domain;
 
 namespace SSAReplacement.Api.Infrastructure;
 
-public sealed class AppDbContext : DbContext
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
     public DbSet<Schedule> Schedules => Set<Schedule>();
+
     public DbSet<Executable> Executables => Set<Executable>();
     public DbSet<ExecutableVersion> ExecutableVersions => Set<ExecutableVersion>();
     public DbSet<ExecutableParameter> ExecutableParameters => Set<ExecutableParameter>();
+
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<JobSchedule> JobSchedules => Set<JobSchedule>();
     public DbSet<JobVariable> JobVariables => Set<JobVariable>();
@@ -66,10 +66,15 @@ public sealed class AppDbContext : DbContext
             b.HasOne(e => e.JobRun).WithMany(r => r.Logs).HasForeignKey(e => e.JobRunId);
         });
 
+        modelBuilder.Entity<Executable>(b =>
+        {
+            b.HasKey(e => e.Id);
+        });
 
         modelBuilder.Entity<ExecutableVersion>(b =>
         {
-            b.HasOne(e => e.Executable).WithMany(x => x.Versions).HasForeignKey(e => e.ExecutableId);
+            b.HasKey(ev => ev.Id);
+            b.HasOne(ev => ev.Executable).WithMany(e => e.Versions).HasForeignKey(ev => ev.ExecutableId);
         });
 
         modelBuilder.Entity<ExecutableParameter>(b =>
@@ -78,6 +83,9 @@ public sealed class AppDbContext : DbContext
             b.HasOne(e => e.Version).WithMany(x => x.Parameters).HasForeignKey(e => e.ExecutableVersionId);
         });
 
-        modelBuilder.Entity<Schedule>(b => b.HasKey(s => s.Id));
+        modelBuilder.Entity<Schedule>(b =>
+        {
+            b.HasKey(s => s.Id);
+        });
     }
 }

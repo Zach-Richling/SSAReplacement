@@ -6,7 +6,7 @@ namespace SSAReplacement.Api.Features.Executables.Handlers;
 
 public static class ActivateExecutableVersion
 {
-    public static async Task<IResult> Handler(int executableId, int versionId, AppDbContext db)
+    public static async Task<IResult> Handler(long executableId, long versionId, AppDbContext db)
     {
         var version = await db.ExecutableVersions.FirstOrDefaultAsync(v => v.ExecutableId == executableId && v.Id == versionId);
 

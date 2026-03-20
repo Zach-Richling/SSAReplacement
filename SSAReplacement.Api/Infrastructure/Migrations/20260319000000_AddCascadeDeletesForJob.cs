@@ -3,7 +3,7 @@ using System.Data;
 
 namespace SSAReplacement.Api.Infrastructure.Migrations;
 
-//[Migration(20260319000000)]
+[Migration(20260319000000)]
 public class AddCascadeDeletesForJob : Migration
 {
     public override void Up()

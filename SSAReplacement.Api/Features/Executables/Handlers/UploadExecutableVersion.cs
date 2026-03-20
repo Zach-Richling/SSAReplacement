@@ -10,7 +10,7 @@ namespace SSAReplacement.Api.Features.Executables.Handlers;
 public static class UploadExecutableVersion
 {
     public static async Task<IResult> Handler(
-        int executableId,
+        long executableId,
         IFormFile file,
         [FromForm] string entryPointDll,
         AppDbContext db,

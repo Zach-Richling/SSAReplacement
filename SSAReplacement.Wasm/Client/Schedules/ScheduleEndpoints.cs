@@ -27,7 +27,7 @@ public class ScheduleEndpoints(HttpClient http)
             ?? throw new HttpRequestException("Unexpected empty response from server.");
     }
 
-    public async Task UpdateScheduleAsync(int scheduleId, UpdateScheduleRequest updateRequest, CancellationToken cancellationToken = default)
+    public async Task UpdateScheduleAsync(long scheduleId, UpdateScheduleRequest updateRequest, CancellationToken cancellationToken = default)
     {
         var res = await http.PutAsJsonAsync($"schedules/{scheduleId}", updateRequest, cancellationToken);
         res.EnsureSuccessStatusCode();

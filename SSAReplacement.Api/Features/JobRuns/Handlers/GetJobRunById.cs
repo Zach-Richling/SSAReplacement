@@ -6,7 +6,7 @@ namespace SSAReplacement.Api.Features.JobRuns.Handlers;
 
 public static class GetJobRunById
 {
-    public static async Task<IResult> Handler(int id, AppDbContext db)
+    public static async Task<IResult> Handler(long id, AppDbContext db)
     {
         var run = await db.JobRuns
             .AsNoTracking()

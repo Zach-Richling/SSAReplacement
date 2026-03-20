@@ -2,8 +2,8 @@ namespace SSAReplacement.Api.Domain;
 
 public class ExecutableVersion
 {
-    public int Id { get; set; }
-    public int ExecutableId { get; set; }
+    public long Id { get; set; }
+    public long ExecutableId { get; set; }
     public int Version { get; set; }
     public string EntryPointDll { get; set; } = "";
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;

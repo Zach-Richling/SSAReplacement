@@ -7,7 +7,7 @@ public static class UpdateExecutable
 {
     public record Request(string Name);
 
-    public static async Task<IResult> Handler(int id, Request req, AppDbContext db)
+    public static async Task<IResult> Handler(long id, Request req, AppDbContext db)
     {
         var exe = await db.Executables.FindAsync(id);
 

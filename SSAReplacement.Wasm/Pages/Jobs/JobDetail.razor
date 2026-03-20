@@ -1,4 +1,4 @@
-@page "/jobs/{Id:int}"
+@page "/jobs/{Id:long}"
 @using Humanizer
 @using SSAReplacement.Wasm.Pages.Jobs.Modals
 @using SSAReplacement.Wasm.Pages.Jobs.Models
@@ -158,7 +158,7 @@ else
 
 @code {
     [Parameter]
-    public int Id { get; set; }
+    public long Id { get; set; }
 
     private SSAReplacement.Wasm.Client.Jobs.JobDetail _job = null!;
     private List<JobRun> _runs = [];
@@ -168,7 +168,7 @@ else
     private bool _savingParameters;
     private bool _triggeringJob;
     private bool _togglingEnabled;
-    private int? _removingScheduleId;
+    private long? _removingScheduleId;
 
     private bool _loading = true;
     private string? _error;
@@ -292,7 +292,7 @@ else
         }
     }
 
-    private async Task RemoveJobSchedule(int jobScheduleId)
+    private async Task RemoveJobSchedule(long jobScheduleId)
     {
         _removingScheduleId = jobScheduleId;
         try
@@ -336,7 +336,7 @@ else
         }
     }
 
-    private void NavigateToRunDetail(int runId)
+    private void NavigateToRunDetail(long runId)
     {
         Nav.NavigateTo($"/jobs/{Id}/runs/{runId}");
     }

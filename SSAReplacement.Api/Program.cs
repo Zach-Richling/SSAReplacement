@@ -22,12 +22,12 @@ Directory.CreateDirectory(executablePath);
 
 // DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // FluentMigrator
 builder.Services.AddFluentMigratorCore()
     .ConfigureRunner(rb => rb
-        .AddSQLite()
+        .AddSqlServer()
         .WithGlobalConnectionString(builder.Configuration.GetConnectionString("DefaultConnection"))
         .ScanIn(typeof(Program).Assembly).For.Migrations());
 

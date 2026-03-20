@@ -4,7 +4,7 @@ using SSAReplacement.Api.Features.Executables.Domain;
 namespace SSAReplacement.Api.Features.JobRuns.Domain;
 
 public record JobRunDto(
-    int Id, int JobId, int ExecutableVersionId, int? ScheduleId,
+    long Id, long JobId, long ExecutableVersionId, long? ScheduleId,
     DateTime StartedAt, DateTime? FinishedAt, string Status, int? ExitCode, string? Trigger)
 {
     public static JobRunDto From(JobRun r) => new(
@@ -13,7 +13,7 @@ public record JobRunDto(
 }
 
 public record JobRunDetailDto(
-    int Id, int JobId, int ExecutableVersionId, int? ScheduleId,
+    long Id, long JobId, long ExecutableVersionId, long? ScheduleId,
     DateTime StartedAt, DateTime? FinishedAt, string Status, int? ExitCode, string? Trigger,
     ExecutableVersionDto? ExecutableVersion, string? ExecutableName)
 {

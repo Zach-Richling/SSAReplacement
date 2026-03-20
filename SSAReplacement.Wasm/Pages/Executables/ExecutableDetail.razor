@@ -1,4 +1,4 @@
-@page "/executables/{Id:int}"
+@page "/executables/{Id:long}"
 @using BlazorBlueprint.Primitives.DataGrid
 @using System.Net
 @using SSAReplacement.Wasm.Pages.Executables.Modals
@@ -153,7 +153,7 @@ else
         }
     }
 
-    private async Task SetActiveVersion(int versionId)
+    private async Task SetActiveVersion(long versionId)
     {
         _activatingVersion = true;
 

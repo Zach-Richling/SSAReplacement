@@ -9,14 +9,14 @@ public static class JobEndpoints
         var group = app.MapGroup("/jobs").WithTags("Jobs");
 
         group.MapGet("/", GetJobs.Handler);
-        group.MapGet("/{id:int}", GetJobById.Handler);
+        group.MapGet("/{id:long}", GetJobById.Handler);
         group.MapPost("/", CreateJob.Handler);
-        group.MapPut("/{id:int}", UpdateJob.Handler);
-        group.MapDelete("/{id:int}", DeleteJob.Handler);
-        group.MapPut("/{id:int}/schedules", UpdateJobSchedules.Handler);
-        group.MapGet("/{id:int}/parameters", GetJobParameters.Handler);
-        group.MapPut("/{id:int}/parameters", UpdateJobParameters.Handler);
-        group.MapPost("/{id:int}/trigger", TriggerJob.Handler);
-        group.MapGet("/{id:int}/runs", GetJobRuns.Handler);
+        group.MapPut("/{id:long}", UpdateJob.Handler);
+        group.MapDelete("/{id:long}", DeleteJob.Handler);
+        group.MapPut("/{id:long}/schedules", UpdateJobSchedules.Handler);
+        group.MapGet("/{id:long}/parameters", GetJobParameters.Handler);
+        group.MapPut("/{id:long}/parameters", UpdateJobParameters.Handler);
+        group.MapPost("/{id:long}/trigger", TriggerJob.Handler);
+        group.MapGet("/{id:long}/runs", GetJobRuns.Handler);
     }
 }

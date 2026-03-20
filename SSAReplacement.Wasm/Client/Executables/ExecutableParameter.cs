@@ -6,7 +6,7 @@ namespace SSAReplacement.Wasm.Client.Executables;
 public class ExecutableParameter
 {
     public long Id { get; set; }
-    public int ExecutableVersionId { get; set; }
+    public long ExecutableVersionId { get; set; }
     public string Name { get; set; } = "";
     public string TypeName { get; set; } = "";
     public string? Description { get; set; }

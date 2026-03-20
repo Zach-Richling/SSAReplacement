@@ -6,7 +6,7 @@ namespace SSAReplacement.Api.Features.Executables.Handlers;
 
 public static class GetVersionParameters
 {
-    public static async Task<IResult> Handler(int executableId, int versionNumber, AppDbContext db)
+    public static async Task<IResult> Handler(long executableId, int versionNumber, AppDbContext db)
     {
         var version = await db.ExecutableVersions
             .AsNoTracking()

@@ -18,7 +18,7 @@ public class ExecutableEndpoints(HttpClient http)
     /// <summary>
     /// GET /executables/{id}. Returns the executable detail or null if not found.
     /// </summary>
-    public async Task<ExecutableDetail?> GetExecutableAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ExecutableDetail?> GetExecutableAsync(long id, CancellationToken cancellationToken = default)
     {
         var res = await http.GetAsync($"executables/{id}", cancellationToken);
 
@@ -33,7 +33,7 @@ public class ExecutableEndpoints(HttpClient http)
     /// <summary>
     /// POST /executables/{executableId}/versions. Uploads a new version. Requires multipart form: file, entryPointDll. Returns the created version.
     /// </summary>
-    public async Task<ExecutableVersion> UploadExecutableVersionAsync(int executableId, Stream fileStream, string fileName, string entryPointDll, CancellationToken cancellationToken = default)
+    public async Task<ExecutableVersion> UploadExecutableVersionAsync(long executableId, Stream fileStream, string fileName, string entryPointDll, CancellationToken cancellationToken = default)
     {
         using var content = new MultipartFormDataContent();
 
@@ -52,7 +52,7 @@ public class ExecutableEndpoints(HttpClient http)
     /// <summary>
     /// GET /executables/{executableId}/versions/{versionId}/parameters. Returns the parameters for the given version.
     /// </summary>
-    public async Task<List<ExecutableParameter>> GetExecutableVersionParametersAsync(int executableId, int versionId, CancellationToken cancellationToken = default)
+    public async Task<List<ExecutableParameter>> GetExecutableVersionParametersAsync(long executableId, long versionId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -68,7 +68,7 @@ public class ExecutableEndpoints(HttpClient http)
     /// <summary>
     /// POST /executables/{executableId}/versions/{versionId}/activate. Sets the given version as active.
     /// </summary>
-    public async Task ActivateExecutableVersionAsync(int executableId, int versionId, CancellationToken cancellationToken = default)
+    public async Task ActivateExecutableVersionAsync(long executableId, long versionId, CancellationToken cancellationToken = default)
     {
         var res = await http.PostAsync($"executables/{executableId}/versions/{versionId}/activate", null, cancellationToken);
         res.EnsureSuccessStatusCode();

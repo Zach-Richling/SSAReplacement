@@ -5,7 +5,7 @@ using SSAReplacement.Api.Features.Schedules.Infrastructure;
 
 namespace SSAReplacement.Api.Features.Jobs.Domain;
 
-public record JobDto(int Id, int ExecutableId, string Name, bool IsEnabled, DateTime CreatedAt, string? NotifyEmail, DateTime? NextRunUtc)
+public record JobDto(long Id, long ExecutableId, string Name, bool IsEnabled, DateTime CreatedAt, string? NotifyEmail, DateTime? NextRunUtc)
 {
     public static JobDto From(Job j) => new(
         j.Id,
@@ -44,7 +44,7 @@ public record JobVariableDto(string Key, string Value)
 }
 
 public record JobDetailDto(
-    int Id, string Name, bool IsEnabled, DateTime CreatedAt, string? NotifyEmail,
+    long Id, string Name, bool IsEnabled, DateTime CreatedAt, string? NotifyEmail,
     ExecutableDto Executable,
     IReadOnlyList<JobVariableDto> Variables,
     IReadOnlyList<ScheduleDto> Schedules)

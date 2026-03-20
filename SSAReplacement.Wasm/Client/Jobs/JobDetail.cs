@@ -8,7 +8,7 @@ namespace SSAReplacement.Wasm.Client.Jobs;
 /// </summary>
 public class JobDetail
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
     public string Name { get; set; } = "";
     public bool IsEnabled { get; set; }
     public DateTime CreatedAt { get; set; }

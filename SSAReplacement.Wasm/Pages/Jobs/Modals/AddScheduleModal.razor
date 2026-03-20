@@ -14,7 +14,7 @@
             <DataAnnotationsValidator />
             <BbField Orientation="FieldOrientation.Responsive">
                 <BbFieldLabel For="schedule">Schedule</BbFieldLabel>
-                <BbCombobox TValue="int" Options="_selectOptions" @bind-Value="_formState.ScheduleId" />
+                <BbCombobox TValue="long" Options="_selectOptions" @bind-Value="_formState.ScheduleId" />
                 <ValidationMessage For="() => _formState.ScheduleId" />
             </BbField>
         </EditForm>
@@ -36,9 +36,9 @@
 
     private AddJobScheduleFormState _formState = new();
     private List<Schedule> _allSchedules = [];
-    private List<SelectOption<int>> _selectOptions => _allSchedules
+    private List<SelectOption<long>> _selectOptions => _allSchedules
         .Where(x => !Job.Schedules.Any(y => y.Id == x.Id))
-        .Select(s => new SelectOption<int>(s.Id, s.Name))
+        .Select(s => new SelectOption<long>(s.Id, s.Name))
         .ToList();
 
     private bool _submitting;
@@ -85,7 +85,7 @@
 
     private class AddJobScheduleFormState
     {
-        [Range(1, double.MaxValue, ErrorMessage = "Please select a schedule.")]
-        public int ScheduleId { get; set; }
+        [Range(1L, long.MaxValue, ErrorMessage = "Please select a schedule.")]
+        public long ScheduleId { get; set; }
     }
 }

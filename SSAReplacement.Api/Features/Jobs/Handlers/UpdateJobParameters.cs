@@ -8,7 +8,7 @@ public static class UpdateJobParameters
 {
     public record Request(Dictionary<string, string> Parameters);
 
-    public static async Task<IResult> Handler(int id, Request request, AppDbContext db)
+    public static async Task<IResult> Handler(long id, Request request, AppDbContext db)
     {
         var job = await db.Jobs
             .Include(j => j.Variables)

@@ -4,7 +4,7 @@ namespace SSAReplacement.Wasm.Client.Jobs;
 /// Request body for POST /jobs (create job).
 /// </summary>
 public record AddJobRequest(
-    int ExecutableId,
+    long ExecutableId,
     string Name,
     bool IsEnabled = true,
     string? NotifyEmail = null);

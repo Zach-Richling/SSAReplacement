@@ -5,7 +5,7 @@ namespace SSAReplacement.Api.Features.Schedules.Handlers;
 
 public static class DeleteSchedule
 {
-    public static async Task<IResult> Handler(int id, AppDbContext db, IScheduleHangfireSyncService sync)
+    public static async Task<IResult> Handler(long id, AppDbContext db, IScheduleHangfireSyncService sync)
     {
         var s = await db.Schedules.FindAsync(id);
 

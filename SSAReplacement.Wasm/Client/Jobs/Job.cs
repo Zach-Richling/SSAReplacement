@@ -4,10 +4,13 @@ namespace SSAReplacement.Wasm.Client.Jobs;
 /// Job list item (matches API JobDto from GET /jobs).
 /// </summary>
 public record Job(
-    int Id,
-    int ExecutableId,
+    long Id,
+    long ExecutableId,
     string Name,
     bool IsEnabled,
     DateTime CreatedAt,
     string? NotifyEmail,
-    DateTime? NextRunUtc);
+    DateTime? NextRunUtc)
+{
+    public DateTime? NextRunLocal => NextRunUtc?.ToLocalTime();
+};

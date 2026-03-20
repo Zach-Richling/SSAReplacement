@@ -5,8 +5,8 @@ namespace SSAReplacement.Wasm.Client.Executables;
 /// </summary>
 public record ExecutableVersion
 {
-    public int Id { get; set; }
-    public int ExecutableId { get; set; }
+    public long Id { get; set; }
+    public long ExecutableId { get; set; }
     public int Version { get; set; }
     public string EntryPointDll { get; set; } = "";
     public DateTime UploadedAt { get; set; }

@@ -2,8 +2,8 @@ namespace SSAReplacement.Api.Domain;
 
 public class Job
 {
-    public int Id { get; set; }
-    public int ExecutableId { get; set; }
+    public long Id { get; set; }
+    public long ExecutableId { get; set; }
     public required string Name { get; set; }
     public bool IsEnabled { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -8,7 +8,7 @@ public static class UpdateJobSchedules
 {
     public record Request(int[]? ScheduleIds);
 
-    public static async Task<IResult> Handler(int id, Request request, AppDbContext db)
+    public static async Task<IResult> Handler(long id, Request request, AppDbContext db)
     {
         var job = await db.Jobs
             .Include(j => j.JobSchedules)

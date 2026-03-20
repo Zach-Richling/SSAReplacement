@@ -4,20 +4,20 @@ namespace SSAReplacement.Api.Features.Executables.Infrastructure;
 
 public interface IExecutableStorage
 {
-    string GetVersionDirectory(int executableId, int versionNumber);
-    Task<string> SaveVersionAsync(int executableId, int versionNumber, Stream zipStream, CancellationToken cancellationToken = default);
+    string GetVersionDirectory(long executableId, int versionNumber);
+    Task<string> SaveVersionAsync(long executableId, int versionNumber, Stream zipStream, CancellationToken cancellationToken = default);
 }
 
 public sealed class FileSystemExecutableStorage(IConfiguration configuration, ILogger<FileSystemExecutableStorage> logger) : IExecutableStorage
 {
     private readonly string _rootPath = configuration["Executables:Path"]!;
 
-    public string GetVersionDirectory(int executableId, int versionNumber)
+    public string GetVersionDirectory(long executableId, int versionNumber)
     {
         return Path.Combine(_rootPath, executableId.ToString(), versionNumber.ToString());
     }
 
-    public async Task<string> SaveVersionAsync(int executableId, int versionNumber, Stream zipStream, CancellationToken cancellationToken = default)
+    public async Task<string> SaveVersionAsync(long executableId, int versionNumber, Stream zipStream, CancellationToken cancellationToken = default)
     {
         var versionDir = GetVersionDirectory(executableId, versionNumber);
         Directory.CreateDirectory(versionDir);

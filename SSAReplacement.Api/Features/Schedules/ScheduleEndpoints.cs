@@ -9,9 +9,9 @@ public static class ScheduleEndpoints
         var group = app.MapGroup("/schedules").WithTags("Schedules");
 
         group.MapGet("/", GetSchedules.Handler);
-        group.MapGet("/{id:int}", GetScheduleById.Handler);
+        group.MapGet("/{id:long}", GetScheduleById.Handler);
         group.MapPost("/", CreateSchedule.Handler);
-        group.MapPut("/{id:int}", UpdateSchedule.Handler);
-        group.MapDelete("/{id:int}", DeleteSchedule.Handler);
+        group.MapPut("/{id:long}", UpdateSchedule.Handler);
+        group.MapDelete("/{id:long}", DeleteSchedule.Handler);
     }
 }

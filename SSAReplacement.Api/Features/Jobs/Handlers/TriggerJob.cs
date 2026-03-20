@@ -7,7 +7,7 @@ namespace SSAReplacement.Api.Features.Jobs.Handlers;
 
 public static class TriggerJob
 {
-    public static async Task<IResult> Handler(int id, AppDbContext db, IBackgroundJobClient jobClient)
+    public static async Task<IResult> Handler(long id, AppDbContext db, IBackgroundJobClient jobClient)
     {
         var exists = await db.Jobs.AnyAsync(j => j.Id == id);
 
