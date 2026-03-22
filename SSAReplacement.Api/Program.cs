@@ -41,6 +41,7 @@ builder.Services.AddSingleton<IJobLogQueue>(sp => sp.GetRequiredService<JobLogQu
 builder.Services.AddHostedService<JobLogWriterBackgroundService>();
 
 // Application services
+builder.Services.AddSingleton<JobCancellationService>();
 builder.Services.AddScoped<IExecutableStorage, FileSystemExecutableStorage>();
 builder.Services.AddScoped<JobRunnerService>();
 builder.Services.AddScoped<ScheduleRunnerService>();

@@ -4,6 +4,7 @@
 
 @inject SsaApiClient Api
 @inject BreadcrumbService Breadcrumbs
+@inject ToastService Toasts
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Job Run Detail</PageTitle>
@@ -20,7 +21,21 @@ else
 {
     <div class="grid grid-cols-2 gap-3 mt-3">
         <BbCard>
-            <BbCardHeader>Run Overview</BbCardHeader>
+            <BbCardHeader Class="flex flex-row justify-between items-center">
+                Run Overview
+                @if (JobRun.Status == "Running")
+                {
+                    <BbButton Variant="ButtonVariant.Destructive"
+                              OnClick="StopRunAsync"
+                              Size="ButtonSize.Small"
+                              Loading="_stopping">
+                        <Icon>
+                            <LucideIcon Name="square" Class="h-4 w-4" />
+                        </Icon>
+                        <ChildContent>Stop Job</ChildContent>
+                    </BbButton>
+                }
+            </BbCardHeader>
             <BbCardContent>
                 <div class="grid grid-cols-2 gap-1">
                     <div class="font-medium">Status</div>
@@ -145,6 +160,7 @@ else
     private bool _loading = true;
     private bool _hasError => !string.IsNullOrEmpty(_error);
     private bool _scrollToBottom;
+    private bool _stopping;
 
     private BbEventConsumer? _consumerRef;
     private CancellationTokenSource? _pollCts;
@@ -198,6 +214,35 @@ else
                 await JSRuntime.InvokeVoidAsync("scrollIntoViewById", "log-list-end");
             }
             catch (JSDisconnectedException) { }
+        }
+    }
+
+    private async Task StopRunAsync()
+    {
+        _stopping = true;
+        try
+        {
+            var stopped = await Api.Job.StopJobRunAsync(Id);
+            if (stopped)
+            {
+                Toasts.Success("Job run stopped successfully");
+
+                var updated = await Api.Job.GetJobRunAsync(Id);
+                if (updated is null)
+                    return;
+
+                JobRun = updated;
+            }
+            else
+                Toasts.Error("Job run could not be stopped. It may have already finished.");
+        }
+        catch (Exception)
+        {
+            Toasts.Error("Failed to stop job run");
+        }
+        finally
+        {
+            _stopping = false;
         }
     }
 

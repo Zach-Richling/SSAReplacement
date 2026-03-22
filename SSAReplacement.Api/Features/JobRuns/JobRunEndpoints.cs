@@ -11,5 +11,6 @@ public static class JobRunEndpoints
         group.MapGet("/{id:long}", GetJobRunById.Handler);
         group.MapGet("/{id:long}/logs", GetJobRunLogs.Handler);
         group.MapGet("/{id:long}/logs/stream", StreamJobRunLogs.Handler);
+        group.MapPost("/{id:long}/stop", StopJobRun.Handler);
     }
 }
