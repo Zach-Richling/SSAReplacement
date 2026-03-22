@@ -10,9 +10,10 @@ public static class GetJobById
     {
         var job = await db.Jobs
             .AsNoTracking()
-            .Include(j => j.Executable)
-                .ThenInclude(ex => ex.Versions)
-            .Include(j => j.Variables)
+            .Include(j => j.Steps.OrderBy(s => s.StepNumber))
+                .ThenInclude(s => s.Executable)
+            .Include(j => j.Steps)
+                .ThenInclude(s => s.Parameters)
             .Include(j => j.JobSchedules)
                 .ThenInclude(js => js.Schedule)
             .AsSplitQuery()

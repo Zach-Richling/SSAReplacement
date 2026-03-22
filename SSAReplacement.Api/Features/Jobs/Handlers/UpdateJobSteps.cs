@@ -5,30 +5,31 @@ using SSAReplacement.Api.Infrastructure;
 
 namespace SSAReplacement.Api.Features.Jobs.Handlers;
 
-public static class CreateJob
+public static class UpdateJobSteps
 {
     public record StepRequest(long ExecutableId, int StepNumber, string Name);
-    public record Request(string Name, List<StepRequest> Steps, bool IsEnabled = true, string? NotifyEmail = null);
+    public record Request(List<StepRequest> Steps);
 
-    public static async Task<IResult> Handler(Request req, AppDbContext db)
+    public static async Task<IResult> Handler(long id, Request request, AppDbContext db)
     {
-        if (req.Steps.Count == 0)
+        var job = await db.Jobs
+            .Include(j => j.Steps)
+            .FirstOrDefaultAsync(j => j.Id == id);
+
+        if (job is null)
+            return Results.NotFound();
+
+        if (request.Steps.Count == 0)
             return Results.BadRequest("At least one step is required.");
 
-        foreach (var step in req.Steps)
+        foreach (var step in request.Steps)
         {
             if (!await db.Executables.AnyAsync(e => e.Id == step.ExecutableId))
                 return Results.NotFound($"Executable {step.ExecutableId} not found");
         }
 
-        var job = new Job
-        {
-            Name = req.Name,
-            IsEnabled = req.IsEnabled,
-            NotifyEmail = req.NotifyEmail
-        };
-
-        foreach (var step in req.Steps)
+        job.Steps.Clear();
+        foreach (var step in request.Steps)
         {
             job.Steps.Add(new JobStep
             {
@@ -38,9 +39,14 @@ public static class CreateJob
             });
         }
 
-        db.Jobs.Add(job);
         await db.SaveChangesAsync();
 
-        return Results.Created($"/jobs/{job.Id}", JobDto.From(job));
+        var reloaded = await db.Jobs
+            .AsNoTracking()
+            .Include(j => j.Steps.OrderBy(s => s.StepNumber))
+                .ThenInclude(s => s.Executable)
+            .FirstAsync(j => j.Id == id);
+
+        return Results.Ok(reloaded.Steps.OrderBy(s => s.StepNumber).Select(JobStepDto.From));
     }
 }

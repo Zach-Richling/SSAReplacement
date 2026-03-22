@@ -11,7 +11,7 @@
     </BbDialogTrigger>
     <BbDialogContent>
         <BbDialogHeader>
-            <BbDialogTitle>Add a job</BbDialogTitle> 
+            <BbDialogTitle>Add a job</BbDialogTitle>
         </BbDialogHeader>
         <EditForm Model="_formState" id="add-job-form" OnValidSubmit="SubmitAddJob">
             <DataAnnotationsValidator />
@@ -20,11 +20,44 @@
                 <BbInputField TValue="string" @bind-Value="_formState.Name" Id="job-name" />
                 <ValidationMessage For="() => _formState.Name" />
             </BbField>
-            <BbField Class="mt-4" Orientation="FieldOrientation.Responsive">
-                <BbFieldLabel For="executable-id">Executable</BbFieldLabel>
-                <BbCombobox TValue="long" Options="_selectOptions" @bind-Value="_formState.SelectedExecutableId" />
-                <ValidationMessage For="() => _formState.SelectedExecutableId" />
-            </BbField>
+
+            <div class="mt-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium">Steps</span>
+                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddStep" Type="ButtonType.Button">
+                        <Icon><LucideIcon Name="plus" Class="h-3 w-3" /></Icon>
+                        <ChildContent>Add Step</ChildContent>
+                    </BbButton>
+                </div>
+
+                @if (_formState.Steps.Count == 0)
+                {
+                    <p class="text-sm text-muted-foreground py-2">No steps defined. Add at least one step.</p>
+                }
+                else
+                {
+                    <div class="flex flex-col gap-2">
+                        @for (var i = 0; i < _formState.Steps.Count; i++)
+                        {
+                            var idx = i;
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-muted-foreground w-6 shrink-0">@(idx + 1).</span>
+                                <BbInputField TValue="string" @bind-Value="_formState.Steps[idx].Name"
+                                              Placeholder="Step name..." Class="w-40 shrink-0" />
+                                <BbCombobox TValue="long"
+                                            Options="_selectOptions"
+                                            @bind-Value="_formState.Steps[idx].SelectedExecutableId"
+                                            Placeholder="Select executable..."
+                                            MatchTriggerWidth
+                                            Class="flex-1" />
+                                <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Icon" OnClick="() => RemoveStep(idx)" Type="ButtonType.Button">
+                                    <LucideIcon Name="trash-2" Class="h-4 w-4 text-destructive" />
+                                </BbButton>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
         </EditForm>
         <BbDialogFooter>
             <BbButton Type="ButtonType.Submit" form="add-job-form" Loading="_submitting" Size="ButtonSize.Small">
@@ -70,23 +103,52 @@
         }
     }
 
+    private void AddStep()
+    {
+        _formState.Steps.Add(new StepFormState());
+    }
+
+    private void RemoveStep(int index)
+    {
+        _formState.Steps.RemoveAt(index);
+    }
+
     private async Task SubmitAddJob()
     {
+        if (_formState.Steps.Count == 0)
+        {
+            Toasts.Error("At least one step is required.");
+            return;
+        }
+
+        if (_formState.Steps.Any(s => s.SelectedExecutableId == 0))
+        {
+            Toasts.Error("Please select an executable for each step.");
+            return;
+        }
+
+        if (_formState.Steps.Any(s => string.IsNullOrWhiteSpace(s.Name)))
+        {
+            Toasts.Error("Please enter a name for each step.");
+            return;
+        }
+
         _submitting = true;
         try
         {
-            await Api.Job.AddJobAsync(new AddJobRequest(
-                _formState.SelectedExecutableId,
-                _formState.Name));
+            var steps = _formState.Steps
+                .Select((s, i) => new JobStepRequest(s.SelectedExecutableId, i + 1, s.Name))
+                .ToList();
+
+            await Api.Job.AddJobAsync(new AddJobRequest(_formState.Name, steps));
 
             if (OnJobCreated.HasDelegate)
-            {
                 await OnJobCreated.InvokeAsync();
-            }
 
             Toasts.Success("Job added successfully");
+            _formState = new();
             IsOpen = false;
-        } 
+        }
         catch (Exception e)
         {
             Toasts.Error("Failed to add job: " + e.Message);
@@ -97,12 +159,17 @@
         }
     }
 
+    private class StepFormState
+    {
+        public long SelectedExecutableId { get; set; }
+        public string Name { get; set; } = "";
+    }
+
     private class AddJobFormState
     {
         [Required(ErrorMessage = "Please enter a job name")]
         public string Name { get; set; } = "";
 
-        [Range(1L, long.MaxValue, ErrorMessage = "Please select an executable.")]
-        public long SelectedExecutableId { get; set; }
+        public List<StepFormState> Steps { get; set; } = [];
     }
 }

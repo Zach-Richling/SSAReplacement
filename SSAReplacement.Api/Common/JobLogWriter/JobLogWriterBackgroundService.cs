@@ -1,3 +1,4 @@
+using EFCore.BulkExtensions;
 using SSAReplacement.Api.Domain;
 using SSAReplacement.Api.Infrastructure;
 
@@ -8,7 +9,7 @@ public sealed class JobLogWriterBackgroundService(
     IServiceScopeFactory scopeFactory,
     ILogger<JobLogWriterBackgroundService> logger) : BackgroundService
 {
-    private const int BatchSize = 50;
+    private const int BatchSize = 100;
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -60,15 +61,13 @@ public sealed class JobLogWriterBackgroundService(
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var entities = batch.Select(e => new JobLog
             {
-                JobRunId = e.JobRunId,
+                JobRunStepId = e.JobRunStepId,
                 LogType = e.LogType,
                 Content = e.Content,
                 LogDate = e.LogDate
             }).ToList();
 
-            db.JobLogs.AddRange(entities);
-
-            await db.SaveChangesAsync();
+            await db.BulkInsertAsync(entities);
         }
         catch (Exception ex)
         {

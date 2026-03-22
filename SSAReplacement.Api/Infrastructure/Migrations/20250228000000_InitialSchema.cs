@@ -9,32 +9,49 @@ public sealed class InitialSchema : Migration
     {
         Create.Table("Job")
             .WithColumn("Id").AsInt64().PrimaryKey().Identity()
-            .WithColumn("ExecutableId").AsInt64().NotNullable()
             .WithColumn("Name").AsString(256).NotNullable()
             .WithColumn("IsEnabled").AsBoolean().NotNullable()
             .WithColumn("CreatedAt").AsDateTime2().NotNullable()
             .WithColumn("NotifyEmail").AsString(256).Nullable();
 
-        Create.Table("JobVariable")
+        Create.Table("JobStep")
             .WithColumn("Id").AsInt64().PrimaryKey().Identity()
             .WithColumn("JobId").AsInt64().NotNullable()
+            .WithColumn("ExecutableId").AsInt64().NotNullable()
+            .WithColumn("StepNumber").AsInt32().NotNullable()
+            .WithColumn("Name").AsString(256).NotNullable();
+
+        Create.Table("JobStepParameter")
+            .WithColumn("Id").AsInt64().PrimaryKey().Identity()
+            .WithColumn("JobStepId").AsInt64().NotNullable()
             .WithColumn("Key").AsString(256).NotNullable()
             .WithColumn("Value").AsString(4096).NotNullable();
 
         Create.Table("JobRun")
             .WithColumn("Id").AsInt64().PrimaryKey().Identity()
             .WithColumn("JobId").AsInt64().NotNullable()
-            .WithColumn("ExecutableVersionId").AsInt64().NotNullable()
-            .WithColumn("ScheduleId").AsInt32().Nullable()
+            .WithColumn("ScheduleId").AsInt64().Nullable()
+            .WithColumn("CurrentStep").AsInt32().Nullable()
             .WithColumn("StartedAt").AsDateTime2().NotNullable()
             .WithColumn("FinishedAt").AsDateTime2().Nullable()
             .WithColumn("Status").AsString(32).NotNullable()
             .WithColumn("ExitCode").AsInt32().Nullable()
             .WithColumn("Trigger").AsString(32).Nullable();
 
-        Create.Table("JobLog")
+        Create.Table("JobRunStep")
             .WithColumn("Id").AsInt64().PrimaryKey().Identity()
             .WithColumn("JobRunId").AsInt64().NotNullable()
+            .WithColumn("ExecutableVersionId").AsInt64().NotNullable()
+            .WithColumn("StepNumber").AsInt32().NotNullable()
+            .WithColumn("StepName").AsString(256).NotNullable()
+            .WithColumn("StartedAt").AsDateTime2().NotNullable()
+            .WithColumn("FinishedAt").AsDateTime2().Nullable()
+            .WithColumn("Status").AsString(32).NotNullable()
+            .WithColumn("ExitCode").AsInt32().Nullable();
+
+        Create.Table("JobLog")
+            .WithColumn("Id").AsInt64().PrimaryKey().Identity()
+            .WithColumn("JobRunStepId").AsInt64().NotNullable()
             .WithColumn("LogDate").AsDateTime2().NotNullable()
             .WithColumn("LogType").AsString(16).NotNullable()
             .WithColumn("Content").AsString().NotNullable();
@@ -77,12 +94,15 @@ public sealed class InitialSchema : Migration
     public override void Down()
     {
         Delete.Table("JobLog");
+        Delete.Table("JobRunStep");
         Delete.Table("JobRun");
-        Delete.Table("JobVariable");
+        Delete.Table("JobStepParameter");
+        Delete.Table("JobStep");
         Delete.Table("ExecutableVersion");
         Delete.Table("JobSchedule");
         Delete.Table("Job");
         Delete.Table("Executable");
         Delete.Table("Schedule");
+        Delete.Table("ExecutableParameter");
     }
 }

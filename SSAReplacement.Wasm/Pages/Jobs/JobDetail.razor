@@ -13,11 +13,11 @@
 @if (_loading)
 {
     <BbAlert Variant="AlertVariant.Info" Class="mt-4">Loading…</BbAlert>
-} 
+}
 else if (_hasError)
 {
     <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
-} 
+}
 else
 {
     <div class="grid grid-cols-2 gap-3 mt-3">
@@ -53,8 +53,8 @@ else
                     <div class="font-medium">Name</div>
                     <div>@_job.Name</div>
 
-                    <div class="font-medium">Executable</div>
-                    <div>@_job.Executable.Name</div>
+                    <div class="font-medium">Steps</div>
+                    <div>@_job.Steps.Count step@(_job.Steps.Count == 1 ? "" : "s")</div>
 
                     <div class="font-medium">Created At</div>
                     <div>@_job.CreatedAt.ToTimeAgo()</div>
@@ -83,7 +83,7 @@ else
                                 <BbBadge Variant="@(schedule.IsEnabled? BadgeVariant.Default: BadgeVariant.Secondary)">@(schedule.IsEnabled ? "Enabled" : "Disabled")</BbBadge>
                             </CellTemplate>
                         </BbDataTableColumn>
-                        <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions"> 
+                        <BbDataTableColumn TData="Schedule" TValue="string" Header="Actions">
                             <CellTemplate Context="schedule">
                                 <BbButton Variant="ButtonVariant.Destructive" Size="ButtonSize.Small" OnClick="() => RemoveJobSchedule(schedule.Id)" Loading="_removingScheduleId == schedule.Id">
                                     <Icon>
@@ -101,31 +101,106 @@ else
     <BbAccordion Collapsible>
         <BbCard Class="mt-3">
             <BbCardContent>
-                <BbAccordionItem Value="job-parameters">
-                    <BbAccordionTrigger>Job Parameters</BbAccordionTrigger>
+                <BbAccordionItem Value="job-steps">
+                    <BbAccordionTrigger>Steps</BbAccordionTrigger>
                     <BbAccordionContent>
-                        <BbDataTable Data="_parameterDisplayItems" TData="JobParameterDisplayItem" ShowToolbar="false" ShowPagination="false">
-                            <Columns>
-                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Key" Header="Name" />
-                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Description ?? "-")" Header="Description" />
-                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Type" Header="Type" />
-                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Value ?? "-")" Header="Value" />
-                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Property="x => x.IsRequired" Header="Is Required?" />
-                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Header="Actions">
-                                    <CellTemplate>
-                                        <EditJobParameterModal Item="context" OnParameterEdited="StateHasChanged" />
-                                    </CellTemplate>
-                                </BbDataTableColumn>
-                                <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Header="">
-                                    <CellTemplate>
-                                        @if(!context.IsExecutableParameter)
-                                        {
-                                            <LucideIcon Name="triangle-alert" Class="h-4 w-4" Color="#FFFF00" />
-                                        }
-                                    </CellTemplate>
-                                </BbDataTableColumn>
-                            </Columns>
-                        </BbDataTable>
+                        @if (_editingSteps)
+                        {
+                            <div class="flex flex-col gap-2 mb-3">
+                                @for (var i = 0; i < _editSteps.Count; i++)
+                                {
+                                    var idx = i;
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm text-muted-foreground w-6 shrink-0">@(idx + 1).</span>
+                                        <BbInputField TValue="string" @bind-Value="_editSteps[idx].Name"
+                                                      Placeholder="Step name..." Class="w-40 shrink-0" />
+                                        <BbCombobox TValue="long"
+                                                    Options="_executableSelectOptions"
+                                                    @bind-Value="_editSteps[idx].SelectedExecutableId"
+                                                    Placeholder="Select executable..."
+                                                    MatchTriggerWidth
+                                                    Class="flex-1" />
+                                        <div class="flex gap-1">
+                                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Icon"
+                                                      OnClick="() => MoveStepUp(idx)" Disabled="idx == 0" Type="ButtonType.Button">
+                                                <LucideIcon Name="chevron-up" Class="h-4 w-4" />
+                                            </BbButton>
+                                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Icon"
+                                                      OnClick="() => MoveStepDown(idx)" Disabled="idx == _editSteps.Count - 1" Type="ButtonType.Button">
+                                                <LucideIcon Name="chevron-down" Class="h-4 w-4" />
+                                            </BbButton>
+                                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Icon"
+                                                      OnClick="() => RemoveEditStep(idx)" Type="ButtonType.Button">
+                                                <LucideIcon Name="trash-2" Class="h-4 w-4 text-destructive" />
+                                            </BbButton>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="flex gap-2">
+                                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddEditStep" Type="ButtonType.Button">
+                                    <Icon><LucideIcon Name="plus" Class="h-3 w-3" /></Icon>
+                                    <ChildContent>Add Step</ChildContent>
+                                </BbButton>
+                                <BbButton Size="ButtonSize.Small" OnClick="SaveSteps" Loading="_savingSteps">
+                                    <Icon><LucideIcon Name="save" Class="h-4 w-4" /></Icon>
+                                    <ChildContent>Save</ChildContent>
+                                </BbButton>
+                                <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" OnClick="CancelEditSteps">Cancel</BbButton>
+                            </div>
+                        }
+                        else
+                        {
+                            <BbAccordion Collapsible>
+                                @foreach (var step in _job.Steps.OrderBy(s => s.StepNumber))
+                                {
+                                    var stepItems = _stepParameterItems.TryGetValue(step.Id, out var items) ? items : [];
+                                    <div class="border rounded-md mb-2">
+                                        <BbAccordionItem Value="@($"step-{step.Id}")">
+                                            <BbAccordionTrigger>
+                                                <span class="font-medium">Step @step.StepNumber — @step.Name</span>
+                                                <span class="text-muted-foreground ml-2">(@step.ExecutableName)</span>
+                                            </BbAccordionTrigger>
+                                            <BbAccordionContent>
+                                                @if (stepItems.Count == 0)
+                                                {
+                                                    <p class="text-sm text-muted-foreground py-1">No parameters defined for this executable.</p>
+                                                }
+                                                else
+                                                {
+                                                    <BbDataTable Data="stepItems" TData="JobParameterDisplayItem" ShowToolbar="false" ShowPagination="false">
+                                                        <Columns>
+                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Key" Header="Name" />
+                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Description ?? "-")" Header="Description" />
+                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Type" Header="Type" />
+                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Value ?? "-")" Header="Value" />
+                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Property="x => x.IsRequired" Header="Required?" />
+                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Header="Actions">
+                                                                <CellTemplate>
+                                                                    <EditJobParameterModal Item="context" OnParameterEdited="StateHasChanged" />
+                                                                </CellTemplate>
+                                                            </BbDataTableColumn>
+                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Header="">
+                                                                <CellTemplate>
+                                                                    @if (!context.IsExecutableParameter)
+                                                                    {
+                                                                        <LucideIcon Name="triangle-alert" Class="h-4 w-4" Color="#FFFF00" />
+                                                                    }
+                                                                </CellTemplate>
+                                                            </BbDataTableColumn>
+                                                        </Columns>
+                                                    </BbDataTable>
+                                                }
+                                            </BbAccordionContent>
+                                        </BbAccordionItem>
+                                    </div>
+                                }
+                            </BbAccordion>
+                            <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Class="mt-3" OnClick="StartEditSteps">
+                                <Icon><LucideIcon Name="pencil" Class="h-4 w-4" /></Icon>
+                                <ChildContent>Edit Steps</ChildContent>
+                            </BbButton>
+                        }
                     </BbAccordionContent>
                 </BbAccordionItem>
             </BbCardContent>
@@ -146,8 +221,8 @@ else
                                 </BbDataTableColumn>
                                 <BbDataTableColumn TData="JobRun" TValue="string" Property="x => x.Status" Header="Status">
                                     <CellTemplate Context="run">
-                                        <BbBadge 
-                                            Variant="@(run.Status switch 
+                                        <BbBadge
+                                            Variant="@(run.Status switch
                                             {
                                                 "Failed" or "Stopped" => BadgeVariant.Destructive,
                                                 "Running" => BadgeVariant.Secondary,
@@ -178,7 +253,7 @@ else
         <div class="unsaved-changes-bar">
             <LucideIcon Name="save" Class="h-4 w-4 shrink-0" />
             <span>You have <strong>@UnsavedChangeCount</strong> unsaved changes</span>
-            <BbButton Size="ButtonSize.Small" OnClick="SaveJobParameters" Loading="_savingParameters">
+            <BbButton Size="ButtonSize.Small" OnClick="SaveAllStepParameters" Loading="_savingParameters">
                 <Icon>
                     <LucideIcon Name="save" Class="h-4 w-4" />
                 </Icon>
@@ -197,8 +272,11 @@ else
     private SSAReplacement.Wasm.Client.Jobs.JobDetail _job = null!;
     private List<JobRun> _runs = [];
 
-    private List<JobParameterDisplayItem> _parameterDisplayItems = [];
-    private Dictionary<string, string?> _originalParameterValues = new();
+    // Per-step parameter display items: stepId -> display items
+    private Dictionary<long, List<JobParameterDisplayItem>> _stepParameterItems = new();
+    // Per-step original values for unsaved-changes tracking: stepId -> (key -> value)
+    private Dictionary<long, Dictionary<string, string?>> _originalStepParameterValues = new();
+
     private bool _savingParameters;
     private bool _triggeringJob;
     private bool _togglingEnabled;
@@ -208,8 +286,19 @@ else
     private string? _error;
     private bool _hasError => !string.IsNullOrEmpty(_error);
 
-    private int UnsavedChangeCount => _parameterDisplayItems
-        .Count(x => _originalParameterValues.TryGetValue(x.Key, out var original) && x.Value != original);
+    private List<Executable> _executables = [];
+    private List<SelectOption<long>> _executableSelectOptions => _executables.Select(e => new SelectOption<long>(e.Id, e.Name)).ToList();
+
+    private bool _editingSteps;
+    private List<StepEditState> _editSteps = [];
+    private bool _savingSteps;
+
+    private int UnsavedChangeCount => _stepParameterItems.Sum(kvp =>
+    {
+        if (!_originalStepParameterValues.TryGetValue(kvp.Key, out var originals))
+            return 0;
+        return kvp.Value.Count(item => originals.TryGetValue(item.Key, out var orig) && item.Value != orig);
+    });
 
     protected override async Task OnInitializedAsync() => await LoadData();
 
@@ -227,7 +316,7 @@ else
         {
             var jobTask = Api.Job.GetJobAsync(Id);
             var runTask = Api.Job.GetJobRunsAsync(Id);
-            var jobParametersTask = Api.Job.GetJobParametersAsync(Id);
+            var executablesTask = Api.Executable.GetExecutablesAsync();
 
             var job = await jobTask;
             if (job is null)
@@ -237,30 +326,36 @@ else
             }
 
             _job = job;
-
-            var exeParameters = await Api.Executable.GetExecutableVersionParametersAsync(job.Executable.Id, job.Executable.ActiveVersion);
-            var jobParameters = await jobParametersTask;
+            _executables = await executablesTask;
             _runs = await runTask;
 
+            _stepParameterItems = new();
+            _originalStepParameterValues = new();
 
-            //Merge job params and executable params for display
-            //These could be out of sync if the user has defined parameters for one version
-            //and rolled back to another. The server also doesn't save the default value of
-            //executable parameters as job parameters.
-            var jobParams = jobParameters.GroupJoin(exeParameters, jp => jp.Key, xp => xp.Name, (jp, xp) => new { jp, xp })
-                .SelectMany(x => x.xp.DefaultIfEmpty(), (x, xp) => new JobParameterDisplayItem(x.jp, xp));
+            foreach (var step in job.Steps)
+            {
+                var exe = _executables.FirstOrDefault(e => e.Id == step.ExecutableId);
+                var exeParameters = exe is not null
+                    ? await Api.Executable.GetExecutableVersionParametersAsync(exe.Id, exe.ActiveVersion)
+                    : [];
 
-            var exeParams = exeParameters.GroupJoin(jobParameters, xp => xp.Name, jp => jp.Key, (xp, jp) => new { xp, jp })
-                 .SelectMany(x => x.jp.DefaultIfEmpty(), (x, jp) => new JobParameterDisplayItem(jp, x.xp));
+                var savedParams = step.Parameters;
 
-            _parameterDisplayItems = jobParams.Union(exeParams)
-                .DistinctBy(x => x.Key)
-                .OrderByDescending(x => x.IsExecutableParameter)
-                .ThenBy(x => x.Key)
-                .ToList();
+                var savedParamsLookup = savedParams.GroupJoin(exeParameters, jp => jp.Key, xp => xp.Name, (jp, xp) => new { jp, xp })
+                    .SelectMany(x => x.xp.DefaultIfEmpty(), (x, xp) => new JobParameterDisplayItem(x.jp, xp));
 
-            _originalParameterValues = _parameterDisplayItems
-                .ToDictionary(x => x.Key, x => x.Value);
+                var exeParamsLookup = exeParameters.GroupJoin(savedParams, xp => xp.Name, jp => jp.Key, (xp, jp) => new { xp, jp })
+                    .SelectMany(x => x.jp.DefaultIfEmpty(), (x, jp) => new JobParameterDisplayItem(jp, x.xp));
+
+                var displayItems = savedParamsLookup.Union(exeParamsLookup)
+                    .DistinctBy(x => x.Key)
+                    .OrderByDescending(x => x.IsExecutableParameter)
+                    .ThenBy(x => x.Key)
+                    .ToList();
+
+                _stepParameterItems[step.Id] = displayItems;
+                _originalStepParameterValues[step.Id] = displayItems.ToDictionary(x => x.Key, x => x.Value);
+            }
         }
         catch (Exception e)
         {
@@ -280,8 +375,8 @@ else
             await Api.Job.TriggerJobAsync(Id);
             Toasts.Success("Job triggered successfully");
             _runs = await Api.Job.GetJobRunsAsync(Id);
-        } 
-        catch (Exception) 
+        }
+        catch (Exception)
         {
             Toasts.Error("An error occurred while triggering the job");
         }
@@ -300,7 +395,7 @@ else
             var wasEnabled = _job.IsEnabled;
             await LoadJob();
             Toasts.Success($"Job {(wasEnabled ? "disabled" : "enabled")} successfully");
-        } 
+        }
         catch (Exception)
         {
             Toasts.Error("An error occured while updating the job");
@@ -335,8 +430,8 @@ else
             Toasts.Success("Job schedule removed successfully");
 
             await LoadJob();
-        } 
-        catch (Exception) 
+        }
+        catch (Exception)
         {
             Toasts.Error("An error occurred while removing the job schedule");
         }
@@ -346,20 +441,30 @@ else
         }
     }
 
-    private async Task SaveJobParameters()
+    private async Task SaveAllStepParameters()
     {
         _savingParameters = true;
         try
         {
-            var parameters = _parameterDisplayItems
-                .ToDictionary(x => x.Key, x => x.Value);
+            foreach (var (stepId, items) in _stepParameterItems)
+            {
+                if (!_originalStepParameterValues.TryGetValue(stepId, out var originals))
+                    continue;
 
-            await Api.Job.SetJobParametersAsync(Id, parameters);
+                var hasChanges = items.Any(item => originals.TryGetValue(item.Key, out var orig) && item.Value != orig);
+                if (!hasChanges)
+                    continue;
+
+                Dictionary<string, string?> parameters = items
+                    .Where(x => x.Value is not null)
+                    .ToDictionary(x => x.Key, x => x.Value);
+
+                await Api.Job.SetJobStepParametersAsync(Id, stepId, parameters);
+            }
 
             await LoadData();
-
             Toasts.Success("Job parameters were saved successfully");
-        } 
+        }
         catch (HttpRequestException)
         {
             Toasts.Error("An error occurred while saving job parameters");
@@ -370,8 +475,86 @@ else
         }
     }
 
+    private void StartEditSteps()
+    {
+        _editSteps = _job.Steps.OrderBy(s => s.StepNumber)
+            .Select(s => new StepEditState { SelectedExecutableId = s.ExecutableId, Name = s.Name })
+            .ToList();
+        _editingSteps = true;
+    }
+
+    private void CancelEditSteps()
+    {
+        _editingSteps = false;
+        _editSteps = [];
+    }
+
+    private void AddEditStep() => _editSteps.Add(new StepEditState());
+
+    private void RemoveEditStep(int index) => _editSteps.RemoveAt(index);
+
+    private void MoveStepUp(int index)
+    {
+        if (index <= 0) return;
+        (_editSteps[index], _editSteps[index - 1]) = (_editSteps[index - 1], _editSteps[index]);
+    }
+
+    private void MoveStepDown(int index)
+    {
+        if (index >= _editSteps.Count - 1) return;
+        (_editSteps[index], _editSteps[index + 1]) = (_editSteps[index + 1], _editSteps[index]);
+    }
+
+    private async Task SaveSteps()
+    {
+        if (_editSteps.Count == 0)
+        {
+            Toasts.Error("At least one step is required.");
+            return;
+        }
+
+        if (_editSteps.Any(s => s.SelectedExecutableId == 0))
+        {
+            Toasts.Error("Please select an executable for each step.");
+            return;
+        }
+
+        if (_editSteps.Any(s => string.IsNullOrWhiteSpace(s.Name)))
+        {
+            Toasts.Error("Please enter a name for each step.");
+            return;
+        }
+
+        _savingSteps = true;
+        try
+        {
+            var steps = _editSteps
+                .Select((s, i) => new JobStepRequest(s.SelectedExecutableId, i + 1, s.Name))
+                .ToList();
+
+            await Api.Job.SetJobStepsAsync(Id, steps);
+            await LoadData();
+            _editingSteps = false;
+            Toasts.Success("Steps saved successfully");
+        }
+        catch (Exception)
+        {
+            Toasts.Error("An error occurred while saving steps");
+        }
+        finally
+        {
+            _savingSteps = false;
+        }
+    }
+
     private void NavigateToRunDetail(long runId)
     {
         Nav.NavigateTo($"/jobs/{Id}/runs/{runId}");
+    }
+
+    private class StepEditState
+    {
+        public long SelectedExecutableId { get; set; }
+        public string Name { get; set; } = "";
     }
 }

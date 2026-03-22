@@ -10,6 +10,6 @@ public class ExecutableVersion
     public bool IsActive { get; set; }
 
     public Executable Executable { get; set; } = null!;
-    public ICollection<JobRun> JobRuns { get; set; } = [];
+    public ICollection<JobRunStep> JobRunSteps { get; set; } = [];
     public ICollection<ExecutableParameter> Parameters { get; set; } = [];
 }

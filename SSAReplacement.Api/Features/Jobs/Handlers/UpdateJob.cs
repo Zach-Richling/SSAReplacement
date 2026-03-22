@@ -6,7 +6,7 @@ namespace SSAReplacement.Api.Features.Jobs.Handlers;
 
 public static class UpdateJob
 {
-    public record Request(long? ExecutableId, string? Name, bool? IsEnabled, string? NotifyEmail = null);
+    public record Request(string? Name, bool? IsEnabled, string? NotifyEmail = null);
 
     public static async Task<IResult> Handler(long id, Request req, AppDbContext db)
     {
@@ -15,7 +15,6 @@ public static class UpdateJob
         if (j is null)
             return Results.NotFound();
 
-        if (req.ExecutableId is long eid) j.ExecutableId = eid;
         if (req.Name is not null) j.Name = req.Name;
         if (req.IsEnabled is bool en) j.IsEnabled = en;
         if (req.NotifyEmail is not null) j.NotifyEmail = req.NotifyEmail;

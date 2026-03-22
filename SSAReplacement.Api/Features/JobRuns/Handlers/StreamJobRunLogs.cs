@@ -45,16 +45,22 @@ public static class StreamJobRunLogs
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var job = await db.JobRuns
+        var run = await db.JobRuns
             .AsNoTracking()
             .Where(jr => jr.Id == id)
             .FirstAsync(cancellationToken);
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            var stepIds = await db.JobRunSteps
+                .AsNoTracking()
+                .Where(s => s.JobRunId == id)
+                .Select(s => s.Id)
+                .ToListAsync(cancellationToken);
+
             var logs = await db.JobLogs
                 .AsNoTracking()
-                .Where(l => l.JobRunId == id && l.Id > lastSeenId)
+                .Where(l => stepIds.Contains(l.JobRunStepId) && l.Id > lastSeenId)
                 .OrderBy(l => l.Id)
                 .ToListAsync(cancellationToken);
 
@@ -67,7 +73,7 @@ public static class StreamJobRunLogs
 
             // Keep connection open but stop querying for non-running jobs.
             // All logs will have been sent to the client by the above foreach loop.
-            if (job.Status != JobRunnerService.StatusRunning)
+            if (run.Status != JobRunnerService.StatusRunning)
             {
                 await Task.Delay(-1, cancellationToken);
             }

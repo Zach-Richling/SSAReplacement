@@ -1,4 +1,6 @@
 @page "/jobs/{JobId:long}/runs/{Id:long}"
+@using Humanizer
+@implements IAsyncDisposable
 
 @inject SsaApiClient Api
 @inject BreadcrumbService Breadcrumbs
@@ -16,21 +18,109 @@ else if (_hasError)
 }
 else
 {
-    <BbCard>
+    <div class="grid grid-cols-2 gap-3 mt-3">
+        <BbCard>
+            <BbCardHeader>Run Overview</BbCardHeader>
+            <BbCardContent>
+                <div class="grid grid-cols-2 gap-1">
+                    <div class="font-medium">Status</div>
+                    <div>
+                        <BbBadge Variant="@(JobRun.Status switch
+                        {
+                            "Failed" or "Stopped" => BadgeVariant.Destructive,
+                            "Running" => BadgeVariant.Secondary,
+                            _ => BadgeVariant.Default
+                        })">@JobRun.Status</BbBadge>
+                    </div>
+
+                    <div class="font-medium">Trigger</div>
+                    <div>@(JobRun.Trigger ?? "-")</div>
+
+                    <div class="font-medium">Started</div>
+                    <div>@JobRun.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</div>
+
+                    <div class="font-medium">Duration</div>
+                    <div>
+                        @if (JobRun.FinishedAt.HasValue)
+                        {
+                            @((JobRun.FinishedAt.Value - JobRun.StartedAt).Humanize())
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+                    </div>
+
+                    @if (JobRun.Status == "Running" && JobRun.CurrentStep.HasValue)
+                    {
+                        <div class="font-medium">Current Step</div>
+                        <div>Step @JobRun.CurrentStep</div>
+                    }
+                </div>
+            </BbCardContent>
+        </BbCard>
+
+        <BbCard>
+            <BbCardHeader>Steps</BbCardHeader>
+            <BbCardContent>
+                @if (JobRun.RunSteps.Count == 0)
+                {
+                    <p class="text-sm text-muted-foreground">No steps recorded yet.</p>
+                }
+                else
+                {
+                    <BbDataTable Data="JobRun.RunSteps.OrderBy(s => s.StepNumber).ToList()" TData="JobRunStep" ShowToolbar="false" ShowPagination="false">
+                        <Columns>
+                            <BbDataTableColumn TData="JobRunStep" TValue="int" Property="x => x.StepNumber" Header="#" />
+                            <BbDataTableColumn TData="JobRunStep" TValue="string" Property="x => x.StepName" Header="Name" />
+                            <BbDataTableColumn TData="JobRunStep" TValue="string" Header="Status">
+                                <CellTemplate Context="step">
+                                    <BbBadge Variant="@(step.Status switch
+                                    {
+                                        "Failed" or "Stopped" => BadgeVariant.Destructive,
+                                        "Running" => BadgeVariant.Secondary,
+                                        _ => BadgeVariant.Default
+                                    })">@step.Status</BbBadge>
+                                </CellTemplate>
+                            </BbDataTableColumn>
+                            <BbDataTableColumn TData="JobRunStep" TValue="string" Header="Duration">
+                                <CellTemplate Context="step">
+                                    @if (step.FinishedAt.HasValue)
+                                    {
+                                        @((step.FinishedAt.Value - step.StartedAt).Humanize())
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </CellTemplate>
+                            </BbDataTableColumn>
+                            <BbDataTableColumn TData="JobRunStep" TValue="int?" Property="x => x.ExitCode" Header="Exit Code">
+                                <CellTemplate Context="step">
+                                    @(step.ExitCode.HasValue ? step.ExitCode.Value.ToString() : "-")
+                                </CellTemplate>
+                            </BbDataTableColumn>
+                        </Columns>
+                    </BbDataTable>
+                }
+            </BbCardContent>
+        </BbCard>
+    </div>
+
+    <BbCard Class="mt-3">
         <BbCardHeader>
             <BbCardTitle>Job Logs</BbCardTitle>
             <BbCardDescription>Logs are streamed - @(_consumerRef?.ConnectionState ?? EventSourceState.Disconnected)</BbCardDescription>
             <BbSeparator />
         </BbCardHeader>
         <BbCardContent>
-            <BbScrollArea MaxHeight="200px">
+            <BbScrollArea MaxHeight="400px">
                 <BbEventConsumer Url="@Api.Job.GetJobLogStreamUrl(Id)" OnConnectionStateChanged="StateHasChanged" @ref="_consumerRef">
                     <BbEventTemplate Event="job-log" TValue="JobLog" RenderMode="EventRenderMode.Accumulate" OnRender="() => _scrollToBottom = true">
                         @{
                             var logLevel = LogLevelFromLogType(context.LogType);
                             var logDateStr = context.LogDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
                         }
-
                         <div class="whitespace-pre-wrap break-all">
                             <span>[ @logDateStr</span><span class="@(logLevel == "ERROR" ? "text-destructive" : "text-primary")">@(" " + logLevel)</span><span>] @context.Content</span>
                         </div>
@@ -56,9 +146,10 @@ else
     private bool _hasError => !string.IsNullOrEmpty(_error);
     private bool _scrollToBottom;
 
-    private static string LogLevelFromLogType(string logType) => logType == "StdOut" ? "INFO" : "ERROR";
-
     private BbEventConsumer? _consumerRef;
+    private CancellationTokenSource? _pollCts;
+
+    private static string LogLevelFromLogType(string logType) => logType == "StdOut" ? "INFO" : "ERROR";
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,6 +164,9 @@ else
             }
 
             JobRun = jobRun;
+
+            if (JobRun.Status == "Running")
+                StartPolling();
         }
         catch (Exception e)
         {
@@ -107,11 +201,43 @@ else
         }
     }
 
-    private void TryScrollToBottom()
+    private void StartPolling()
     {
-        if (_scrollToBottom)
-            return;
+        _pollCts = new CancellationTokenSource();
+        _ = PollRunStatusAsync(_pollCts.Token);
+    }
 
-        _scrollToBottom = true;
+    private async Task PollRunStatusAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(3000, cancellationToken);
+
+                var updated = await Api.Job.GetJobRunAsync(Id);
+                if (updated is null) break;
+
+                JobRun = updated;
+                await InvokeAsync(StateHasChanged);
+
+                if (updated.Status != "Running")
+                    break;
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception) { }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollCts is CancellationTokenSource cts)
+        {
+            await cts.CancelAsync();
+            cts.Dispose();
+        }
     }
 }

@@ -12,17 +12,21 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ExecutableParameter> ExecutableParameters => Set<ExecutableParameter>();
 
     public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<JobStep> JobSteps => Set<JobStep>();
+    public DbSet<JobStepParameter> JobStepParameters => Set<JobStepParameter>();
     public DbSet<JobSchedule> JobSchedules => Set<JobSchedule>();
-    public DbSet<JobVariable> JobVariables => Set<JobVariable>();
     public DbSet<JobRun> JobRuns => Set<JobRun>();
+    public DbSet<JobRunStep> JobRunSteps => Set<JobRunStep>();
     public DbSet<JobLog> JobLogs => Set<JobLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Job>().ToTable("Job");
+        modelBuilder.Entity<JobStep>().ToTable("JobStep");
+        modelBuilder.Entity<JobStepParameter>().ToTable("JobStepParameter");
         modelBuilder.Entity<JobSchedule>().ToTable("JobSchedule");
         modelBuilder.Entity<JobRun>().ToTable("JobRun");
-        modelBuilder.Entity<JobVariable>().ToTable("JobVariable");
+        modelBuilder.Entity<JobRunStep>().ToTable("JobRunStep");
         modelBuilder.Entity<JobLog>().ToTable("JobLog");
 
         modelBuilder.Entity<Executable>().ToTable("Executable");
@@ -34,10 +38,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         modelBuilder.Entity<Job>(b =>
         {
             b.HasKey(j => j.Id);
-            b.HasOne(j => j.Executable).WithMany(e => e.Jobs).HasForeignKey(e => e.ExecutableId);
+            b.HasMany(j => j.Steps).WithOne(s => s.Job).HasForeignKey(s => s.JobId).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(j => j.JobSchedules).WithOne(js => js.Job).HasForeignKey(js => js.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
-            b.HasMany(j => j.Variables).WithOne(v => v.Job).HasForeignKey(v => v.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(j => j.Runs).WithOne(jr => jr.Job).HasForeignKey(jr => jr.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<JobStep>(b =>
+        {
+            b.HasKey(s => s.Id);
+            b.HasOne(s => s.Job).WithMany(j => j.Steps).HasForeignKey(s => s.JobId);
+            b.HasOne(s => s.Executable).WithMany(e => e.JobSteps).HasForeignKey(s => s.ExecutableId);
+            b.HasMany(s => s.Parameters).WithOne(p => p.JobStep).HasForeignKey(p => p.JobStepId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<JobStepParameter>(b =>
+        {
+            b.HasKey(e => e.Id);
+            b.HasOne(e => e.JobStep).WithMany(s => s.Parameters).HasForeignKey(e => e.JobStepId);
         });
 
         modelBuilder.Entity<JobSchedule>(b =>
@@ -50,20 +67,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         {
             b.HasKey(jr => jr.Id);
             b.HasOne(e => e.Job).WithMany(j => j.Runs).HasForeignKey(e => e.JobId);
-            b.HasOne(e => e.ExecutableVersion).WithMany(v => v.JobRuns).HasForeignKey(e => e.ExecutableVersionId);
             b.HasOne(e => e.Schedule).WithMany(s => s.JobRuns).HasForeignKey(e => e.ScheduleId);
+            b.HasMany(e => e.RunSteps).WithOne(s => s.JobRun).HasForeignKey(s => s.JobRunId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<JobVariable>(b =>
+        modelBuilder.Entity<JobRunStep>(b =>
         {
-            b.HasKey(e => e.Id);
-            b.HasOne(e => e.Job).WithMany(j => j.Variables).HasForeignKey(e => e.JobId);
+            b.HasKey(s => s.Id);
+            b.HasOne(s => s.JobRun).WithMany(r => r.RunSteps).HasForeignKey(s => s.JobRunId);
+            b.HasOne(s => s.ExecutableVersion).WithMany(v => v.JobRunSteps).HasForeignKey(s => s.ExecutableVersionId);
+            b.HasMany(s => s.Logs).WithOne(l => l.JobRunStep).HasForeignKey(l => l.JobRunStepId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<JobLog>(b =>
         {
             b.HasKey(jl => jl.Id);
-            b.HasOne(e => e.JobRun).WithMany(r => r.Logs).HasForeignKey(e => e.JobRunId);
+            b.HasOne(e => e.JobRunStep).WithMany(s => s.Logs).HasForeignKey(e => e.JobRunStepId);
         });
 
         modelBuilder.Entity<Executable>(b =>

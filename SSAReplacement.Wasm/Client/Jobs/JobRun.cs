@@ -7,11 +7,12 @@ public record JobRun
 {
     public long Id { get; set; }
     public long JobId { get; set; }
-    public long ExecutableVersionId { get; set; }
     public long? ScheduleId { get; set; }
+    public int? CurrentStep { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
     public string Status { get; set; } = "";
     public int? ExitCode { get; set; }
     public string? Trigger { get; set; }
+    public List<JobRunStep> RunSteps { get; set; } = [];
 }

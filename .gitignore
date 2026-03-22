@@ -402,5 +402,4 @@ FodyWeavers.xsd
 
 appsettings*.json
 
-JobBinaries/
-jobs.db
+.claude/

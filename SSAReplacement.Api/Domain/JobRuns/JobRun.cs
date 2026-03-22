@@ -4,8 +4,8 @@ public class JobRun
 {
     public long Id { get; set; }
     public long JobId { get; set; }
-    public long ExecutableVersionId { get; set; }
     public long? ScheduleId { get; set; }
+    public int? CurrentStep { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
     public required string Status { get; set; }
@@ -13,7 +13,6 @@ public class JobRun
     public string? Trigger { get; set; }
 
     public Job Job { get; set; } = null!;
-    public ExecutableVersion ExecutableVersion { get; set; } = null!;
     public Schedule? Schedule { get; set; }
-    public ICollection<JobLog> Logs { get; set; } = [];
+    public ICollection<JobRunStep> RunSteps { get; set; } = [];
 }

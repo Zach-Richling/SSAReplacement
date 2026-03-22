@@ -10,9 +10,7 @@ public static class GetJobRunById
     {
         var run = await db.JobRuns
             .AsNoTracking()
-            .Include(r => r.Job)
-            .Include(r => r.ExecutableVersion)
-                .ThenInclude(v => v.Executable)
+            .Include(r => r.RunSteps.OrderBy(s => s.StepNumber))
             .FirstOrDefaultAsync(r => r.Id == id);
 
         return run is null ? Results.NotFound() : Results.Ok(JobRunDetailDto.From(run));

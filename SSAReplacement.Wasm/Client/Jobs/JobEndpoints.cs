@@ -29,6 +29,15 @@ public class JobEndpoints(HttpClient http)
     }
 
     /// <summary>
+    /// PUT /jobs/{id}/steps. Replaces the job's steps.
+    /// </summary>
+    public async Task SetJobStepsAsync(long jobId, IEnumerable<JobStepRequest> steps, CancellationToken cancellationToken = default)
+    {
+        var res = await http.PutAsJsonAsync($"jobs/{jobId}/steps", new { Steps = steps }, cancellationToken);
+        res.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
     /// PUT /jobs/{id}/schedules. Replaces the job's assigned schedules.
     /// </summary>
     public async Task SetJobSchedulesAsync(long jobId, IEnumerable<long> scheduleIds, CancellationToken cancellationToken = default)
@@ -80,20 +89,20 @@ public class JobEndpoints(HttpClient http)
     }
 
     /// <summary>
-    /// GET /job/{jobId}/parameters. Returns all parameters for the job.
+    /// GET /jobs/{jobId}/steps/{stepId}/parameters. Returns all parameters for the given step.
     /// </summary>
-    public async Task<List<JobParameter>> GetJobParametersAsync(long jobId, CancellationToken cancellationToken = default)
+    public async Task<List<JobStepParameter>> GetJobStepParametersAsync(long jobId, long stepId, CancellationToken cancellationToken = default)
     {
-        var list = await http.GetFromJsonAsync<List<JobParameter>>($"jobs/{jobId}/parameters", cancellationToken);
+        var list = await http.GetFromJsonAsync<List<JobStepParameter>>($"jobs/{jobId}/steps/{stepId}/parameters", cancellationToken);
         return list ?? [];
     }
 
     /// <summary>
-    /// PUT /job/{jobId}/parameters. Overwrites the job parameters with the input parameters
+    /// PUT /jobs/{jobId}/steps/{stepId}/parameters. Overwrites the step parameters.
     /// </summary>
-    public async Task SetJobParametersAsync(long jobId, Dictionary<string, string?> parameters, CancellationToken cancellationToken = default)
+    public async Task SetJobStepParametersAsync(long jobId, long stepId, Dictionary<string, string?> parameters, CancellationToken cancellationToken = default)
     {
-        var res = await http.PutAsJsonAsync($"jobs/{jobId}/parameters", new { Parameters = parameters }, cancellationToken);
+        var res = await http.PutAsJsonAsync($"jobs/{jobId}/steps/{stepId}/parameters", new { Parameters = parameters }, cancellationToken);
         res.EnsureSuccessStatusCode();
     }
 

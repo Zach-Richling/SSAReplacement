@@ -5,7 +5,6 @@ namespace SSAReplacement.Wasm.Client.Jobs;
 /// </summary>
 public record Job(
     long Id,
-    long ExecutableId,
     string Name,
     bool IsEnabled,
     DateTime CreatedAt,

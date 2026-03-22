@@ -12,8 +12,8 @@ public static class DeleteExecutable
         if (exe is null)
             return Results.NotFound();
 
-        if (await db.Jobs.AnyAsync(j => j.ExecutableId == id))
-            return Results.Conflict("Cannot delete executable that is referenced by one or more jobs.");
+        if (await db.JobSteps.AnyAsync(s => s.ExecutableId == id))
+            return Results.Conflict("Cannot delete executable that is referenced by one or more job steps.");
 
         db.Executables.Remove(exe);
 

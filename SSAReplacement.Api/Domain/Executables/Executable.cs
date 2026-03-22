@@ -7,5 +7,5 @@ public class Executable
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<ExecutableVersion> Versions { get; set; } = [];
-    public ICollection<Job> Jobs { get; set; } = [];
+    public ICollection<JobStep> JobSteps { get; set; } = [];
 }

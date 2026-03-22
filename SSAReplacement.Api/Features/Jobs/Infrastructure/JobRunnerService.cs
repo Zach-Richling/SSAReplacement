@@ -27,9 +27,11 @@ public sealed class JobRunnerService(
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var job = await db.Jobs
-            .Include(j => j.Executable)
-                .ThenInclude(e => e.Versions.Where(v => v.IsActive))
-            .Include(j => j.Variables)
+            .Include(j => j.Steps.OrderBy(s => s.StepNumber))
+                .ThenInclude(s => s.Executable)
+                    .ThenInclude(e => e.Versions.Where(v => v.IsActive))
+            .Include(j => j.Steps)
+                .ThenInclude(s => s.Parameters)
             .AsNoTracking()
             .FirstOrDefaultAsync(j => j.Id == jobId, cancellationToken);
 
@@ -39,26 +41,15 @@ public sealed class JobRunnerService(
             return;
         }
 
-        var activeVersion = job.Executable?.Versions.FirstOrDefault();
-        if (activeVersion == null)
+        if (job.Steps.Count == 0)
         {
-            logger.LogWarning("Job {JobId} executable has no active version", jobId);
-            return;
-        }
-
-        var versionDir = storage.GetVersionDirectory(job.ExecutableId, activeVersion.Version);
-        var dllPath = Path.Combine(versionDir, activeVersion.EntryPointDll);
-
-        if (!File.Exists(dllPath))
-        {
-            logger.LogError("Entry point DLL not found: {Path}", dllPath);
+            logger.LogWarning("Job {JobId} has no steps defined", jobId);
             return;
         }
 
         var run = new JobRun
         {
             JobId = jobId,
-            ExecutableVersionId = activeVersion.Id,
             ScheduleId = scheduleId,
             StartedAt = DateTime.UtcNow,
             Status = StatusRunning,
@@ -69,63 +60,131 @@ public sealed class JobRunnerService(
         await db.SaveChangesAsync(cancellationToken);
 
         var runId = run.Id;
+        var overallSuccess = true;
 
-        try
+        foreach (var step in job.Steps.OrderBy(s => s.StepNumber))
         {
-            using var process = new Process();
-            process.StartInfo.FileName = "dotnet";
-            process.StartInfo.Arguments = $"\"{activeVersion.EntryPointDll}\"";
-            process.StartInfo.WorkingDirectory = versionDir;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.CreateNoWindow = true;
-
-            foreach (var v in job.Variables)
-                process.StartInfo.Environment[$"JobVariables__{v.Key}"] = v.Value;
-
-            process.OutputDataReceived += (_, e) =>
+            var activeVersion = step.Executable?.Versions.FirstOrDefault();
+            if (activeVersion == null)
             {
-                if (e.Data != null)
-                    _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runId, "StdOut", e.Data, DateTime.UtcNow), CancellationToken.None);
+                logger.LogWarning("Job {JobId} step {StepNumber} executable has no active version", jobId, step.StepNumber);
+                run.FinishedAt = DateTime.UtcNow;
+                run.Status = StatusFailed;
+                run.ExitCode = -1;
+
+                db.JobRuns.Update(run);
+                await db.SaveChangesAsync(CancellationToken.None);
+
+                return;
+            }
+
+            var versionDir = storage.GetVersionDirectory(step.ExecutableId, activeVersion.Version);
+            var dllPath = Path.Combine(versionDir, activeVersion.EntryPointDll);
+
+            if (!File.Exists(dllPath))
+            {
+                logger.LogError("Entry point DLL not found for step {StepNumber}: {Path}", step.StepNumber, dllPath);
+                run.FinishedAt = DateTime.UtcNow;
+                run.Status = StatusFailed;
+                run.ExitCode = -1;
+
+                db.JobRuns.Update(run);
+                await db.SaveChangesAsync(CancellationToken.None);
+
+                return;
+            }
+
+            run.CurrentStep = step.StepNumber;
+            db.JobRuns.Update(run);
+
+            var runStep = new JobRunStep
+            {
+                JobRunId = runId,
+                ExecutableVersionId = activeVersion.Id,
+                StepNumber = step.StepNumber,
+                StepName = step.Name,
+                StartedAt = DateTime.UtcNow,
+                Status = StatusRunning
             };
 
-            process.ErrorDataReceived += (_, e) =>
+            db.JobRunSteps.Add(runStep);
+            await db.SaveChangesAsync(cancellationToken);
+
+            var runStepId = runStep.Id;
+
+            try
             {
-                if (e.Data != null)
-                    _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runId, "StdErr", e.Data, DateTime.UtcNow), CancellationToken.None);
-            };
+                using var process = new Process();
+                process.StartInfo.FileName = "dotnet";
+                process.StartInfo.Arguments = $"\"{activeVersion.EntryPointDll}\"";
+                process.StartInfo.WorkingDirectory = versionDir;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.CreateNoWindow = true;
 
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+                foreach (var v in step.Parameters)
+                    process.StartInfo.Environment[$"JobVariables__{v.Key}"] = v.Value;
 
-            await process.WaitForExitAsync(cancellationToken);
+                process.OutputDataReceived += (_, e) =>
+                {
+                    if (e.Data != null)
+                        _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runStepId, "StdOut", e.Data, DateTime.UtcNow), CancellationToken.None);
+                };
 
-            run.FinishedAt = DateTime.UtcNow;
-            run.ExitCode = process.ExitCode;
-            run.Status = process.ExitCode == 0 ? StatusSuccess : StatusFailed;
+                process.ErrorDataReceived += (_, e) =>
+                {
+                    if (e.Data != null)
+                        _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runStepId, "StdErr", e.Data, DateTime.UtcNow), CancellationToken.None);
+                };
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await process.WaitForExitAsync(cancellationToken);
+
+                runStep.FinishedAt = DateTime.UtcNow;
+                runStep.ExitCode = process.ExitCode;
+                runStep.Status = process.ExitCode == 0 ? StatusSuccess : StatusFailed;
+
+                if (process.ExitCode != 0)
+                    overallSuccess = false;
+            }
+            catch (TaskCanceledException)
+            {
+                runStep.FinishedAt = DateTime.UtcNow;
+                runStep.Status = StatusStopped;
+                runStep.ExitCode = -2;
+                overallSuccess = false;
+
+                _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runStepId, "StdErr", "The job was forcefully stopped.", DateTime.UtcNow), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error running job {JobId} step {StepNumber}", jobId, step.StepNumber);
+                runStep.FinishedAt = DateTime.UtcNow;
+                runStep.Status = StatusFailed;
+                runStep.ExitCode = -1;
+                overallSuccess = false;
+
+                _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runStepId, "StdErr", ex.ToString(), DateTime.UtcNow), CancellationToken.None);
+            }
+
+            db.JobRunSteps.Update(runStep);
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            if (!overallSuccess)
+                break;
         }
-        catch (TaskCanceledException)
-        {
-            run.FinishedAt = DateTime.UtcNow;
-            run.Status = StatusStopped;
-            run.ExitCode = -2;
 
-            _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runId, "StdErr", "The job was forcefully stopped.", DateTime.UtcNow), CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error running job {JobId}", jobId);
-            run.FinishedAt = DateTime.UtcNow;
-            run.Status = StatusFailed;
+        run.FinishedAt = DateTime.UtcNow;
+        run.Status = overallSuccess ? StatusSuccess : StatusFailed;
+
+        if (!overallSuccess)
             run.ExitCode = -1;
 
-            _ = jobLogQueue.EnqueueAsync(new JobLogEntry(runId, "StdErr", ex.ToString(), DateTime.UtcNow), CancellationToken.None);
-        }
-
         db.JobRuns.Update(run);
-
         await db.SaveChangesAsync(CancellationToken.None);
     }
 }

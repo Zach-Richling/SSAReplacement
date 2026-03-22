@@ -1,39 +1,42 @@
-﻿using SSAReplacement.Wasm.Client.Executables;
+using SSAReplacement.Wasm.Client.Executables;
 using SSAReplacement.Wasm.Client.Jobs;
 
 namespace SSAReplacement.Wasm.Pages.Jobs.Models;
 
 public class JobParameterDisplayItem
 {
-    public JobParameter JobParameter { get; set; }
+    public JobStepParameter JobStepParameter { get; set; }
     public ExecutableParameter? ExecutableParameter { get; set; }
 
-    public JobParameterDisplayItem(JobParameter? jobParam = null, ExecutableParameter? exeParameter = null)
+    public JobParameterDisplayItem(JobStepParameter? jobParam = null, ExecutableParameter? exeParameter = null)
     {
         if (jobParam is null && exeParameter is null)
         {
-            throw new ArgumentNullException("Job or Executable parameter must be provided");
+            throw new ArgumentNullException("Job step or Executable parameter must be provided");
         }
 
         if (jobParam is not null && exeParameter is not null)
         {
             if (jobParam.Key != exeParameter.Name)
             {
-                throw new ArgumentException("Job and Executable Parameters must have the same name.");
+                throw new ArgumentException("Job step and Executable Parameters must have the same name.");
             }
         }
 
-        if (jobParam is null && exeParameter is null)
-        {
-            throw new ArgumentNullException("Job or Executable parameter must be provided");
-        }
-
-        JobParameter = jobParam ?? new JobParameter() { Key = exeParameter!.Name };
+        JobStepParameter = jobParam ?? new JobStepParameter() { Key = exeParameter!.Name };
         ExecutableParameter = exeParameter;
     }
 
-    public string Key => JobParameter?.Key ?? ExecutableParameter?.Name!;
-    public string? Value => string.IsNullOrEmpty(JobParameter?.Value) ? ExecutableParameter?.DefaultValue : JobParameter?.Value;
+    public string Key => JobStepParameter?.Key ?? ExecutableParameter?.Name!;
+    public string? Value
+    {
+        get => string.IsNullOrEmpty(JobStepParameter?.Value) ? ExecutableParameter?.DefaultValue : JobStepParameter?.Value;
+        set
+        {
+            if (JobStepParameter is not null)
+                JobStepParameter.Value = value;
+        }
+    }
 
     public bool IsExecutableParameter => ExecutableParameter is not null;
 

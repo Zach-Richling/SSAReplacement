@@ -14,8 +14,9 @@ public static class JobEndpoints
         group.MapPut("/{id:long}", UpdateJob.Handler);
         group.MapDelete("/{id:long}", DeleteJob.Handler);
         group.MapPut("/{id:long}/schedules", UpdateJobSchedules.Handler);
-        group.MapGet("/{id:long}/parameters", GetJobParameters.Handler);
-        group.MapPut("/{id:long}/parameters", UpdateJobParameters.Handler);
+        group.MapPut("/{id:long}/steps", UpdateJobSteps.Handler);
+        group.MapGet("/{id:long}/steps/{stepId:long}/parameters", GetJobStepParameters.Handler);
+        group.MapPut("/{id:long}/steps/{stepId:long}/parameters", UpdateJobStepParameters.Handler);
         group.MapPost("/{id:long}/trigger", TriggerJob.Handler);
         group.MapGet("/{id:long}/runs", GetJobRuns.Handler);
     }
