@@ -106,96 +106,110 @@ else
                     <BbAccordionContent>
                         @if (_editingSteps)
                         {
-                            <div class="flex flex-col gap-2 mb-3">
-                                @for (var i = 0; i < _editSteps.Count; i++)
-                                {
-                                    var idx = i;
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm text-muted-foreground w-6 shrink-0">@(idx + 1).</span>
-                                        <BbInputField TValue="string" @bind-Value="_editSteps[idx].Name"
+                            <BbSortable TItem="StepEditState"
+                                        Items="_editSteps"
+                                        Handle=".drag-handle"
+                                        OnUpdate="OnStepReordered"
+                                        Class="mb-3">
+                                <ItemTemplate Context="step">
+                                    <div class="flex items-center gap-3 rounded-md border bg-card px-3 py-2">
+                                        <LucideIcon Name="grip-vertical" Class="drag-handle h-4 w-4 shrink-0 cursor-grab text-muted-foreground" />
+                                        <span class="text-sm text-muted-foreground w-6 shrink-0">@(_editSteps.IndexOf(step) + 1).</span>
+                                        <BbInputField TValue="string" @bind-Value="step.Name"
                                                       Placeholder="Step name..." Class="w-40 shrink-0" />
                                         <BbCombobox TValue="long"
                                                     Options="_executableSelectOptions"
-                                                    @bind-Value="_editSteps[idx].SelectedExecutableId"
-                                                    Placeholder="Select executable..."
-                                                    MatchTriggerWidth
-                                                    Class="flex-1" />
-                                        <div class="flex gap-1">
-                                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Icon"
-                                                      OnClick="() => MoveStepUp(idx)" Disabled="idx == 0" Type="ButtonType.Button">
-                                                <LucideIcon Name="chevron-up" Class="h-4 w-4" />
-                                            </BbButton>
-                                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Icon"
-                                                      OnClick="() => MoveStepDown(idx)" Disabled="idx == _editSteps.Count - 1" Type="ButtonType.Button">
-                                                <LucideIcon Name="chevron-down" Class="h-4 w-4" />
-                                            </BbButton>
-                                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Icon"
-                                                      OnClick="() => RemoveEditStep(idx)" Type="ButtonType.Button">
-                                                <LucideIcon Name="trash-2" Class="h-4 w-4 text-destructive" />
-                                            </BbButton>
-                                        </div>
+                                                    @bind-Value="step.SelectedExecutableId"
+                                                    Placeholder="Select executable..." />
+                                        <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Icon" Class="ml-auto"
+                                                  OnClick="() => RemoveEditStep(_editSteps.IndexOf(step))">
+                                            <LucideIcon Name="trash-2" Class="h-4 w-4 text-destructive" />
+                                        </BbButton>
                                     </div>
-                                }
-                            </div>
+                                </ItemTemplate>
+                            </BbSortable>
                             <div class="flex gap-2">
-                                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddEditStep" Type="ButtonType.Button">
+                                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddEditStep">
                                     <Icon><LucideIcon Name="plus" Class="h-3 w-3" /></Icon>
                                     <ChildContent>Add Step</ChildContent>
                                 </BbButton>
-                                <BbButton Size="ButtonSize.Small" OnClick="SaveSteps" Loading="_savingSteps">
-                                    <Icon><LucideIcon Name="save" Class="h-4 w-4" /></Icon>
-                                    <ChildContent>Save</ChildContent>
-                                </BbButton>
-                                <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" OnClick="CancelEditSteps">Cancel</BbButton>
+                                <div class="flex gap-2 ml-auto">
+                                    <BbButton Size="ButtonSize.Small" OnClick="SaveSteps" Loading="_savingSteps">
+                                        <Icon><LucideIcon Name="save" Class="h-4 w-4" /></Icon>
+                                        <ChildContent>Save</ChildContent>
+                                    </BbButton>
+                                    <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" OnClick="CancelEditSteps">Cancel</BbButton>
+                                </div>
                             </div>
                         }
                         else
                         {
-                            <BbAccordion Collapsible>
-                                @foreach (var step in _job.Steps.OrderBy(s => s.StepNumber))
-                                {
-                                    var stepItems = _stepParameterItems.TryGetValue(step.Id, out var items) ? items : [];
-                                    <div class="border rounded-md mb-2">
-                                        <BbAccordionItem Value="@($"step-{step.Id}")">
-                                            <BbAccordionTrigger>
-                                                <span class="font-medium">Step @step.StepNumber — @step.Name</span>
-                                                <span class="text-muted-foreground ml-2">(@step.ExecutableName)</span>
-                                            </BbAccordionTrigger>
-                                            <BbAccordionContent>
-                                                @if (stepItems.Count == 0)
-                                                {
-                                                    <p class="text-sm text-muted-foreground py-1">No parameters defined for this executable.</p>
-                                                }
-                                                else
-                                                {
-                                                    <BbDataTable Data="stepItems" TData="JobParameterDisplayItem" ShowToolbar="false" ShowPagination="false">
-                                                        <Columns>
-                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Key" Header="Name" />
-                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Description ?? "-")" Header="Description" />
-                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Type" Header="Type" />
-                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Value ?? "-")" Header="Value" />
-                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Property="x => x.IsRequired" Header="Required?" />
-                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Header="Actions">
-                                                                <CellTemplate>
-                                                                    <EditJobParameterModal Item="context" OnParameterEdited="StateHasChanged" />
-                                                                </CellTemplate>
-                                                            </BbDataTableColumn>
-                                                            <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Header="">
-                                                                <CellTemplate>
-                                                                    @if (!context.IsExecutableParameter)
-                                                                    {
-                                                                        <LucideIcon Name="triangle-alert" Class="h-4 w-4" Color="#FFFF00" />
-                                                                    }
-                                                                </CellTemplate>
-                                                            </BbDataTableColumn>
-                                                        </Columns>
-                                                    </BbDataTable>
-                                                }
-                                            </BbAccordionContent>
-                                        </BbAccordionItem>
+                            <BbDataGrid TData="JobStep"
+                                        Items="@(_job.Steps.OrderBy(s => s.StepNumber))"
+                                        ItemKey="@(s => s.Id)"
+                                        ShowPagination="false"
+                                        Class="steps-grid rounded-lg overflow-hidden">
+                                <Columns>
+                                    <BbDataGridExpandColumn />
+                                    <BbDataGridPropertyColumn Property="@(s => s.StepNumber)" Title="#" Width="60px" />
+                                    <BbDataGridPropertyColumn Property="@(s => s.Name)" Title="Step Name" />
+                                    <BbDataGridPropertyColumn Property="@(s => s.ExecutableName)" Title="Executable" />
+                                    <BbDataGridTemplateColumn Title="Parameters" Width="130px">
+                                        <ChildContent Context="step">
+                                            @{ var paramItems = _stepParameterItems.TryGetValue(step.Id, out var pi) ? pi : []; }
+                                            <span>@paramItems.Count parameter@(paramItems.Count == 1 ? "" : "s")</span>
+                                        </ChildContent>
+                                    </BbDataGridTemplateColumn>
+                                    <BbDataGridTemplateColumn Title="" Width="48px">
+                                        <ChildContent Context="step">
+                                            @{ var warnItems = _stepParameterItems.TryGetValue(step.Id, out var wi) ? wi : []; }
+                                            @if (warnItems.Any(x => x.IsRequired && string.IsNullOrEmpty(x.Value)))
+                                            {
+                                                <BbTooltip>
+                                                    <BbTooltipTrigger>
+                                                        <LucideIcon Name="triangle-alert" Class="h-4 w-4 text-yellow-400" />
+                                                    </BbTooltipTrigger>
+                                                    <BbTooltipContent>One or more required parameters are not set</BbTooltipContent>
+                                                </BbTooltip>
+                                            }
+                                        </ChildContent>
+                                    </BbDataGridTemplateColumn>
+                                </Columns>
+                                <DetailTemplate Context="step">
+                                    @{ var stepItems = _stepParameterItems.TryGetValue(step.Id, out var di) ? di : []; }
+                                    <div class="p-3">
+                                        @if (stepItems.Count == 0)
+                                        {
+                                            <p class="text-sm text-muted-foreground py-1">No parameters defined for this executable.</p>
+                                        }
+                                        else
+                                        {
+                                            <BbDataTable Data="stepItems" TData="JobParameterDisplayItem" ShowToolbar="false" ShowPagination="false">
+                                                <Columns>
+                                                    <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Key" Header="Name" />
+                                                    <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Description ?? "-")" Header="Description" />
+                                                    <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="x => x.Type" Header="Type" />
+                                                    <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Property="@(x => x.Value ?? "-")" Header="Value" />
+                                                    <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Property="x => x.IsRequired" Header="Required?" />
+                                                    <BbDataTableColumn TData="JobParameterDisplayItem" TValue="string" Header="Actions">
+                                                        <CellTemplate>
+                                                            <EditJobParameterModal Item="context" OnParameterEdited="StateHasChanged" />
+                                                        </CellTemplate>
+                                                    </BbDataTableColumn>
+                                                    <BbDataTableColumn TData="JobParameterDisplayItem" TValue="bool" Header="">
+                                                        <CellTemplate>
+                                                            @if (!context.IsExecutableParameter)
+                                                            {
+                                                                <LucideIcon Name="triangle-alert" Class="h-4 w-4" Color="#FFFF00" />
+                                                            }
+                                                        </CellTemplate>
+                                                    </BbDataTableColumn>
+                                                </Columns>
+                                            </BbDataTable>
+                                        }
                                     </div>
-                                }
-                            </BbAccordion>
+                                </DetailTemplate>
+                            </BbDataGrid>
                             <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Class="mt-3" OnClick="StartEditSteps">
                                 <Icon><LucideIcon Name="pencil" Class="h-4 w-4" /></Icon>
                                 <ChildContent>Edit Steps</ChildContent>
@@ -493,16 +507,11 @@ else
 
     private void RemoveEditStep(int index) => _editSteps.RemoveAt(index);
 
-    private void MoveStepUp(int index)
+    private void OnStepReordered((int OldIndex, int NewIndex) e)
     {
-        if (index <= 0) return;
-        (_editSteps[index], _editSteps[index - 1]) = (_editSteps[index - 1], _editSteps[index]);
-    }
-
-    private void MoveStepDown(int index)
-    {
-        if (index >= _editSteps.Count - 1) return;
-        (_editSteps[index], _editSteps[index + 1]) = (_editSteps[index + 1], _editSteps[index]);
+        var item = _editSteps[e.OldIndex];
+        _editSteps.RemoveAt(e.OldIndex);
+        _editSteps.Insert(e.NewIndex, item);
     }
 
     private async Task SaveSteps()
