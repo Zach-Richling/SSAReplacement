@@ -492,7 +492,7 @@ else
     private void StartEditSteps()
     {
         _editSteps = _job.Steps.OrderBy(s => s.StepNumber)
-            .Select(s => new StepEditState { SelectedExecutableId = s.ExecutableId, Name = s.Name })
+            .Select(s => new StepEditState { JobStepId = s.Id, SelectedExecutableId = s.ExecutableId, Name = s.Name })
             .ToList();
         _editingSteps = true;
     }
@@ -538,7 +538,7 @@ else
         try
         {
             var steps = _editSteps
-                .Select((s, i) => new JobStepRequest(s.SelectedExecutableId, i + 1, s.Name))
+                .Select((s, i) => new JobStepRequest(s.JobStepId, s.SelectedExecutableId, i + 1, s.Name))
                 .ToList();
 
             await Api.Job.SetJobStepsAsync(Id, steps);
@@ -563,6 +563,7 @@ else
 
     private class StepEditState
     {
+        public long? JobStepId { get; set; }
         public long SelectedExecutableId { get; set; }
         public string Name { get; set; } = "";
     }

@@ -137,7 +137,7 @@
         try
         {
             var steps = _formState.Steps
-                .Select((s, i) => new JobStepRequest(s.SelectedExecutableId, i + 1, s.Name))
+                .Select((s, i) => new JobStepRequest(null, s.SelectedExecutableId, i + 1, s.Name))
                 .ToList();
 
             await Api.Job.AddJobAsync(new AddJobRequest(_formState.Name, steps));

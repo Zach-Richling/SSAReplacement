@@ -101,7 +101,6 @@
         _togglingSchedule = schedule;
         try
         {
-            await Task.Delay(5000);
             await Api.Schedule.UpdateScheduleAsync(schedule.Id, new UpdateScheduleRequest(schedule.Name, schedule.CronExpression, !schedule.IsEnabled));
             schedule.IsEnabled = !schedule.IsEnabled;
             Toasts.Success($"Schedule {(schedule.IsEnabled ? "enabled" : "disabled")} successfully");

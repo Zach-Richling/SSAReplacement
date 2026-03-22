@@ -3,7 +3,7 @@ namespace SSAReplacement.Wasm.Client.Jobs;
 /// <summary>
 /// A step in a job creation/update request.
 /// </summary>
-public record JobStepRequest(long ExecutableId, int StepNumber, string Name);
+public record JobStepRequest(long? JobStepId, long ExecutableId, int StepNumber, string Name);
 
 /// <summary>
 /// Request body for POST /jobs (create job).
