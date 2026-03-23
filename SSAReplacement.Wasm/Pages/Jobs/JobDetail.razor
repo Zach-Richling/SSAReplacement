@@ -26,12 +26,21 @@ else
             <BbCardHeader Class="flex flex-row justify-between items-center">
                 Job Details
                 <div>
-                    <BbButton Size="ButtonSize.Small" OnClick="TriggerJobRun" Loading="_triggeringJob">
+                    <BbSplitButton Size="ButtonSize.Small" OnClick="() => TriggerJobRun()">
                         <Icon>
                             <LucideIcon Name="play" Class="h-4 w-4" />
                         </Icon>
                         <ChildContent>Start</ChildContent>
-                    </BbButton>
+                        <DropdownContent>
+                            @foreach (var step in _job.Steps.OrderBy(s => s.StepNumber))
+                            {
+                                <BbSplitButtonItem OnClick="() => TriggerJobRun(step.StepNumber)">
+                                    <LucideIcon Name="step-forward" Class="mr-2 h-4 w-4" />
+                                    Start at: @step.Name
+                                </BbSplitButtonItem>
+                            }
+                        </DropdownContent>
+                    </BbSplitButton>
                     <BbButton Size="ButtonSize.Small" OnClick="ToggleEnabled" Class="ml-2" Loading="_togglingEnabled" Variant="@(_job.IsEnabled ? ButtonVariant.Secondary : ButtonVariant.Default)">
                         <Icon>
                             <LucideIcon Name="@(_job.IsEnabled ? "power-off" : "power")" Class="h-4 w-4" />
@@ -230,12 +239,12 @@ else
         }
     }
 
-    private async Task TriggerJobRun()
+    private async Task TriggerJobRun(int? startAtStep = null)
     {
         _triggeringJob = true;
         try
         {
-            await Api.Job.TriggerJobAsync(Id);
+            await Api.Job.TriggerJobAsync(Id, startAtStep);
             Toasts.Success("Job triggered successfully");
             _runs = await Api.Job.GetJobRunsAsync(Id);
         }

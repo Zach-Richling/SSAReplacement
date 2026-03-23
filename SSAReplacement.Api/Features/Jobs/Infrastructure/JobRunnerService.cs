@@ -22,7 +22,7 @@ public sealed class JobRunnerService(
     public const string TriggerScheduled = "Scheduled";
     public const string TriggerManual = "Manual";
 
-    public async Task RunAsync(long jobId, long? scheduleId = null, CancellationToken cancellationToken = default)
+    public async Task RunAsync(long jobId, long? scheduleId = null, int? startAtStep = null, CancellationToken cancellationToken = default)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -69,7 +69,11 @@ public sealed class JobRunnerService(
 
         try
         {
-            foreach (var step in job.Steps.OrderBy(s => s.StepNumber))
+            var steps = job.Steps.OrderBy(s => s.StepNumber).AsEnumerable();
+            if (startAtStep.HasValue)
+                steps = steps.Where(s => s.StepNumber >= startAtStep.Value);
+
+            foreach (var step in steps)
             {
                 var activeVersion = step.Executable?.Versions.FirstOrDefault();
                 if (activeVersion == null)

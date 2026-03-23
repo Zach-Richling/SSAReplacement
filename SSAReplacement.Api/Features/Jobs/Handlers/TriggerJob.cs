@@ -7,14 +7,17 @@ namespace SSAReplacement.Api.Features.Jobs.Handlers;
 
 public static class TriggerJob
 {
-    public static async Task<IResult> Handler(long id, AppDbContext db, IBackgroundJobClient jobClient)
+    public record TriggerJobRequest(int? StartAtStep = null);
+
+    public static async Task<IResult> Handler(long id, TriggerJobRequest? request, AppDbContext db, IBackgroundJobClient jobClient)
     {
         var exists = await db.Jobs.AnyAsync(j => j.Id == id);
 
         if (!exists)
             return Results.NotFound();
 
-        jobClient.Enqueue<JobRunnerService>(s => s.RunAsync(id));
+        var startAtStep = request?.StartAtStep;
+        jobClient.Enqueue<JobRunnerService>(s => s.RunAsync(id, null, startAtStep));
 
         return Results.Accepted();
     }

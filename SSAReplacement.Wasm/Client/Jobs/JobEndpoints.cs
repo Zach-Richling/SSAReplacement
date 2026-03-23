@@ -47,11 +47,13 @@ public class JobEndpoints(HttpClient http)
     }
 
     /// <summary>
-    /// POST /jobs/{id}/trigger. Enqueues a run.
+    /// POST /jobs/{id}/trigger. Enqueues a run. Optionally starts at a specific step number.
     /// </summary>
-    public async Task TriggerJobAsync(long jobId, CancellationToken cancellationToken = default)
+    public async Task TriggerJobAsync(long jobId, int? startAtStep = null, CancellationToken cancellationToken = default)
     {
-        var res = await http.PostAsync($"jobs/{jobId}/trigger", null, cancellationToken);
+        var res = startAtStep.HasValue
+            ? await http.PostAsJsonAsync($"jobs/{jobId}/trigger", new { StartAtStep = startAtStep.Value }, cancellationToken)
+            : await http.PostAsync($"jobs/{jobId}/trigger", null, cancellationToken);
         res.EnsureSuccessStatusCode();
     }
 
