@@ -124,14 +124,33 @@ else
 
     <BbCard Class="mt-3">
         <BbCardHeader>
-            <BbCardTitle>Job Logs</BbCardTitle>
-            <BbCardDescription>Logs are streamed - @(_consumerRef?.ConnectionState ?? EventSourceState.Disconnected)</BbCardDescription>
+            <div class="flex flex-row justify-between items-center w-full">
+                <div>
+                    <BbCardTitle>Job Logs</BbCardTitle>
+                    <BbCardDescription>Logs are streamed - @(_consumerRef?.ConnectionState ?? EventSourceState.Disconnected)</BbCardDescription>
+                </div>
+                @if (JobRun.RunSteps.Count > 0)
+                {
+                    <BbSelect TValue="long?" @bind-Value="_selectedStepId" Class="w-[180px]">
+                        <BbSelectTrigger TValue="long?">
+                            <BbSelectValue Placeholder="All Steps" />
+                        </BbSelectTrigger>
+                        <BbSelectContent TValue="long?">
+                            <BbSelectItem TValue="long?" Value="null" Text="All Steps">All Steps</BbSelectItem>
+                            @foreach (var step in JobRun.RunSteps.OrderBy(s => s.StepNumber))
+                            {
+                                <BbSelectItem TValue="long?" Value="step.Id" Text="@($"Step {step.StepNumber} - {step.StepName}")" />
+                            }
+                        </BbSelectContent>
+                    </BbSelect>
+                }
+            </div>
             <BbSeparator />
         </BbCardHeader>
         <BbCardContent>
             <BbScrollArea MaxHeight="400px">
                 <BbEventConsumer Url="@Api.Job.GetJobLogStreamUrl(Id)" OnConnectionStateChanged="StateHasChanged" @ref="_consumerRef">
-                    <BbEventTemplate Event="job-log" TValue="JobLog" RenderMode="EventRenderMode.Accumulate" OnRender="() => _scrollToBottom = true">
+                    <BbEventTemplate Event="job-log" TValue="JobLog" RenderMode="EventRenderMode.Accumulate" OnRender="() => _scrollToBottom = true" Predicate="LogStepFilter">
                         @{
                             var logLevel = LogLevelFromLogType(context.LogType);
                             var logDateStr = context.LogDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
@@ -161,11 +180,14 @@ else
     private bool _hasError => !string.IsNullOrEmpty(_error);
     private bool _scrollToBottom;
     private bool _stopping;
+    private long? _selectedStepId;
 
     private BbEventConsumer? _consumerRef;
     private CancellationTokenSource? _pollCts;
 
     private static string LogLevelFromLogType(string logType) => logType == "StdOut" ? "INFO" : "ERROR";
+
+    private bool LogStepFilter(JobLog log) => _selectedStepId is null || log.JobRunStepId == _selectedStepId;
 
     protected override async Task OnInitializedAsync()
     {

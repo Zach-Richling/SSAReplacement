@@ -10,15 +10,16 @@
 {
     if (EffectiveRenderMode == EventRenderMode.Accumulate)
     {
+        var filtered = Predicate is not null ? values.Where(Predicate).ToList() : values;
         if (Virtualize)
         {
-            <Virtualize Items="values" Context="item">
+            <Virtualize Items="filtered" Context="item">
                 @ChildContent(item)
             </Virtualize>
         }
         else
         {
-            @foreach (var item in values)
+            @foreach (var item in filtered)
             {
                 @ChildContent(item)
             }
@@ -83,6 +84,14 @@
     public EventCallback<TValue> OnRender { get; set; }
 
     /// <summary>
+    /// Optional predicate to filter which events are rendered.
+    /// Events that do not match the predicate are still stored but not displayed.
+    /// When a new event does not match the predicate, <see cref="OnRender"/> is not fired.
+    /// </summary>
+    [Parameter]
+    public Func<TValue, bool>? Predicate { get; set; }
+
+    /// <summary>
     /// Option to virtualize the accumulated list of events.
     /// This will improve rendering performance for large lists.
     /// </summary>
@@ -126,7 +135,10 @@
                     eventIds.Add(eventId);
                     values.Add(value);
 
-                    ScheduleRender();
+                    if (Predicate is null || Predicate(value))
+                    {
+                        ScheduleRender();
+                    }
                 }
             }
             else
