@@ -1,14 +1,384 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+@inject SsaApiClient Api
+@inject NavigationManager Nav
+@inject BreadcrumbService Breadcrumbs
 
-<h1>Hello, world!</h1>
+<PageTitle>Dashboard</PageTitle>
 
-Welcome to your new app.
+<div class="flex items-center justify-between mb-4">
+    <span class="text-lg font-semibold">Dashboard</span>
+    <BbSelect TValue="int" Value="_rangeHours" ValueChanged="OnRangeChangedAsync" Options="_rangeOptions" />
+</div>
+
+@* Summary Cards *@
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    @if (_summary is not null)
+    {
+        <BbCard>
+            <BbCardHeader Class="pb-2">
+                <BbCardDescription>
+                    <div class="flex items-center gap-2">
+                        <LucideIcon Name="activity" Class="h-4 w-4" />
+                        Running Jobs
+                    </div>
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                <span class="text-2xl font-bold">@_summary.RunningJobs</span>
+            </BbCardContent>
+        </BbCard>
+
+        <BbCard>
+            <BbCardHeader Class="pb-2">
+                <BbCardDescription>
+                    <div class="flex items-center gap-2">
+                        <LucideIcon Name="circle-x" Class="h-4 w-4" />
+                        Failed Runs
+                    </div>
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                <span class="text-2xl font-bold @(_summary.FailedRuns > 0 ? "text-destructive" : "")">
+                    @_summary.FailedRuns
+                </span>
+            </BbCardContent>
+        </BbCard>
+
+        <BbCard>
+            <BbCardHeader Class="pb-2">
+                <BbCardDescription>
+                    <div class="flex items-center gap-2">
+                        <LucideIcon Name="power" Class="h-4 w-4" />
+                        Enabled / Disabled
+                    </div>
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                <span class="text-2xl font-bold">@_summary.EnabledJobs</span>
+                <span class="text-muted-foreground text-sm ml-1">/ @_summary.DisabledJobs</span>
+            </BbCardContent>
+        </BbCard>
+
+        <BbCard>
+            <BbCardHeader Class="pb-2">
+                <BbCardDescription>
+                    <div class="flex items-center gap-2">
+                        <LucideIcon Name="calendar-clock" Class="h-4 w-4" />
+                        Scheduled Today
+                    </div>
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                <span class="text-2xl font-bold">@_summary.ScheduledRunsToday</span>
+            </BbCardContent>
+        </BbCard>
+    }
+    else if (_summaryLoading)
+    {
+        @for (var i = 0; i < 4; i++)
+        {
+            <BbCard>
+                <BbCardContent Class="flex justify-center py-6">
+                    <BbSpinner />
+                </BbCardContent>
+            </BbCard>
+        }
+    }
+    else if (_summaryError is not null)
+    {
+        <div class="col-span-4">
+            <BbAlert Variant="AlertVariant.Danger">@_summaryError</BbAlert>
+        </div>
+    }
+</div>
+
+@* Run History Chart *@
+<BbCard Class="mb-4">
+    <BbCardHeader>
+        <BbCardTitle>Run History</BbCardTitle>
+        <BbCardDescription>Success and failure counts per hour (last 24 hours)</BbCardDescription>
+    </BbCardHeader>
+    <BbCardContent>
+        @if (_runHistory is not null)
+        {
+            <BbBarChart Data="_runHistory" Config="_runHistoryConfig" Height="250px">
+                <BbXAxis DataKey="Hour" />
+                <BbYAxis />
+                <BbChartTooltip />
+                <BbChartLegend />
+                <BbBar DataKey="Success" Stacked="true" BorderRadius="0" />
+                <BbBar DataKey="Failed" Stacked="true" BorderRadius="4" />
+            </BbBarChart>
+        }
+        else if (_runHistoryLoading)
+        {
+            <div class="flex justify-center py-6">
+                <BbSpinner />
+            </div>
+        }
+        else if (_runHistoryError is not null)
+        {
+            <BbAlert Variant="AlertVariant.Danger">@_runHistoryError</BbAlert>
+        }
+    </BbCardContent>
+</BbCard>
+
+@* Bottom sections *@
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    @* Upcoming Runs *@
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>Upcoming Runs</BbCardTitle>
+        </BbCardHeader>
+        <BbCardContent>
+            @if (_upcomingRuns is not null)
+            {
+                @if (_upcomingRuns.Count == 0)
+                {
+                    <p class="text-muted-foreground text-sm">No upcoming runs scheduled.</p>
+                }
+                else
+                {
+                    <BbDataTable TData="UpcomingRun" Data="_upcomingRuns"
+                                 ShowToolbar="false" ShowPagination="false">
+                        <Columns>
+                            <BbDataTableColumn TData="UpcomingRun" TValue="string"
+                                             Property="@(r => r.JobName)" Header="Job">
+                                <CellTemplate Context="run">
+                                    <a href="@($"jobs/{run.JobId}")" class="text-primary hover:underline">@run.JobName</a>
+                                </CellTemplate>
+                            </BbDataTableColumn>
+                            <BbDataTableColumn TData="UpcomingRun" TValue="string"
+                                             Property="@(r => r.NextRunUtc.ToLocalTime().ToString("g"))" Header="Next Run">
+                                <CellTemplate Context="run">
+                                    <span title="@run.NextRunUtc.ToLocalTime().ToString("f")">
+                                        @FormatTimeUntil(run.NextRunUtc)
+                                    </span>
+                                </CellTemplate>
+                            </BbDataTableColumn>
+                        </Columns>
+                    </BbDataTable>
+                }
+            }
+            else if (_upcomingLoading)
+            {
+                <div class="flex justify-center py-6">
+                    <BbSpinner />
+                </div>
+            }
+            else if (_upcomingError is not null)
+            {
+                <BbAlert Variant="AlertVariant.Danger">@_upcomingError</BbAlert>
+            }
+        </BbCardContent>
+    </BbCard>
+
+    @* Failure Spotlight *@
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>Failure Spotlight</BbCardTitle>
+            <BbCardDescription>Jobs with repeated failures</BbCardDescription>
+        </BbCardHeader>
+        <BbCardContent>
+            @if (_failureSpotlight is not null)
+            {
+                @if (_failureSpotlight.Count == 0)
+                {
+                    <p class="text-muted-foreground text-sm">No repeated failures in this period.</p>
+                }
+                else
+                {
+                    <BbDataTable TData="FailureSpotlight" Data="_failureSpotlight"
+                                 ShowToolbar="false" ShowPagination="false">
+                        <Columns>
+                            <BbDataTableColumn TData="FailureSpotlight" TValue="string"
+                                             Property="@(f => f.JobName)" Header="Job">
+                                <CellTemplate Context="item">
+                                    <a href="@($"jobs/{item.JobId}")" class="text-primary hover:underline">@item.JobName</a>
+                                </CellTemplate>
+                            </BbDataTableColumn>
+                            <BbDataTableColumn TData="FailureSpotlight" TValue="int"
+                                             Property="@(f => f.FailureCount)" Header="Failures">
+                                <CellTemplate Context="item">
+                                    <BbBadge Variant="BadgeVariant.Destructive">@item.FailureCount</BbBadge>
+                                </CellTemplate>
+                            </BbDataTableColumn>
+                            <BbDataTableColumn TData="FailureSpotlight" TValue="string"
+                                             Property="@(f => f.LastFailureUtc.HasValue ? f.LastFailureUtc.Value.ToTimeAgo() : "-")" Header="Last Failure">
+                                <CellTemplate Context="item">
+                                    @(item.LastFailureUtc.HasValue ? item.LastFailureUtc.Value.ToTimeAgo() : "-")
+                                </CellTemplate>
+                            </BbDataTableColumn>
+                        </Columns>
+                    </BbDataTable>
+                }
+            }
+            else if (_failureLoading)
+            {
+                <div class="flex justify-center py-6">
+                    <BbSpinner />
+                </div>
+            }
+            else if (_failureError is not null)
+            {
+                <BbAlert Variant="AlertVariant.Danger">@_failureError</BbAlert>
+            }
+        </BbCardContent>
+    </BbCard>
+</div>
 
 @code {
-    [Inject]
-    public required BreadcrumbService Breadcrumbs { get; set; }
+    private DashboardSummary? _summary;
+    private bool _summaryLoading;
+    private string? _summaryError;
 
-    protected override void OnInitialized() => Breadcrumbs.Set();
+    private List<UpcomingRun>? _upcomingRuns;
+    private bool _upcomingLoading;
+    private string? _upcomingError;
+
+    private List<FailureSpotlight>? _failureSpotlight;
+    private bool _failureLoading;
+    private string? _failureError;
+
+    private List<RunHistoryBucket>? _runHistory;
+    private bool _runHistoryLoading;
+    private string? _runHistoryError;
+
+    private readonly ChartConfig _runHistoryConfig = ChartConfig.Create(
+        ("Success", new ChartSeriesConfig { Label = "Success", Color = "var(--chart-1)" }),
+        ("Failed", new ChartSeriesConfig { Label = "Failed", Color = "hsl(var(--destructive))" }));
+
+    private int _rangeHours = 24;
+
+    private readonly List<SelectOption<int>> _rangeOptions =
+    [
+        new(24, "Last 24 hours"),
+        new(168, "Last 7 days"),
+        new(720, "Last 30 days")
+    ];
+
+    protected override void OnInitialized()
+    {
+        Breadcrumbs.Set();
+        _ = LoadAllAsync();
+    }
+
+    private async Task OnRangeChangedAsync(int value)
+    {
+        _rangeHours = value;
+        await LoadAllAsync();
+    }
+
+    private async Task LoadAllAsync()
+    {
+        var summaryTask = LoadSummaryAsync();
+        var upcomingTask = LoadUpcomingRunsAsync();
+        var failureTask = LoadFailureSpotlightAsync();
+        var historyTask = LoadRunHistoryAsync();
+
+        await Task.WhenAll(summaryTask, upcomingTask, failureTask, historyTask);
+    }
+
+    private async Task LoadSummaryAsync()
+    {
+        _summary = null;
+        _summaryLoading = true;
+        _summaryError = null;
+        StateHasChanged();
+
+        try
+        {
+            _summary = await Api.Dashboard.GetSummaryAsync(_rangeHours);
+        }
+        catch (Exception ex)
+        {
+            _summaryError = $"Failed to load summary: {ex.Message}";
+        }
+        finally
+        {
+            _summaryLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadUpcomingRunsAsync()
+    {
+        _upcomingRuns = null;
+        _upcomingLoading = true;
+        _upcomingError = null;
+        StateHasChanged();
+
+        try
+        {
+            _upcomingRuns = await Api.Dashboard.GetUpcomingRunsAsync();
+        }
+        catch (Exception ex)
+        {
+            _upcomingError = $"Failed to load upcoming runs: {ex.Message}";
+        }
+        finally
+        {
+            _upcomingLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadFailureSpotlightAsync()
+    {
+        _failureSpotlight = null;
+        _failureLoading = true;
+        _failureError = null;
+        StateHasChanged();
+
+        try
+        {
+            _failureSpotlight = await Api.Dashboard.GetFailureSpotlightAsync(_rangeHours);
+        }
+        catch (Exception ex)
+        {
+            _failureError = $"Failed to load failure spotlight: {ex.Message}";
+        }
+        finally
+        {
+            _failureLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadRunHistoryAsync()
+    {
+        _runHistory = null;
+        _runHistoryLoading = true;
+        _runHistoryError = null;
+        StateHasChanged();
+
+        try
+        {
+            _runHistory = await Api.Dashboard.GetRunHistoryAsync();
+        }
+        catch (Exception ex)
+        {
+            _runHistoryError = $"Failed to load run history: {ex.Message}";
+        }
+        finally
+        {
+            _runHistoryLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string FormatTimeUntil(DateTime utcTime)
+    {
+        var diff = utcTime - DateTime.UtcNow;
+        if (diff.TotalSeconds < 0)
+            return "now";
+        if (diff.TotalMinutes < 1)
+            return "in less than a minute";
+        if (diff.TotalMinutes < 60)
+            return $"in {(int)diff.TotalMinutes} min";
+        if (diff.TotalHours < 24)
+            return $"in {(int)diff.TotalHours}h {diff.Minutes}m";
+        return $"in {(int)diff.TotalDays}d {diff.Hours}h";
+    }
 }

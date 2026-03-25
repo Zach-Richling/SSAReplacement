@@ -9,6 +9,7 @@ using SSAReplacement.Api.Features.JobRuns;
 using SSAReplacement.Api.Features.JobRuns.Infrastructure;
 using SSAReplacement.Api.Features.Jobs;
 using SSAReplacement.Api.Features.Jobs.Infrastructure;
+using SSAReplacement.Api.Features.Dashboard;
 using SSAReplacement.Api.Features.Schedules;
 using SSAReplacement.Api.Features.Schedules.Infrastructure;
 using SSAReplacement.Api.Infrastructure;
@@ -86,5 +87,6 @@ app.MapExecutableEndpoints();
 app.MapExecutableVersionEndpoints();
 app.MapJobEndpoints();
 app.MapJobRunEndpoints();
+app.MapDashboardEndpoints();
 
 app.Run();

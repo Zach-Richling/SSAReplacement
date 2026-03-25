@@ -1,3 +1,4 @@
+using SSAReplacement.Wasm.Client.Dashboard;
 using SSAReplacement.Wasm.Client.Executables;
 using SSAReplacement.Wasm.Client.Jobs;
 using SSAReplacement.Wasm.Client.Schedules;
@@ -9,6 +10,7 @@ namespace SSAReplacement.Wasm.Client;
 /// </summary>
 public class SsaApiClient(HttpClient http)
 {
+    public readonly DashboardEndpoints Dashboard = new(http);
     public readonly JobEndpoints Job = new(http);
     public readonly ExecutableEndpoints Executable = new(http);
     public readonly ScheduleEndpoints Schedule = new(http);
