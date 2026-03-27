@@ -8,7 +8,8 @@ public static class ExecutableVersionEndpoints
     {
         var group = app
             .MapGroup("/executables/{executableId:long}/versions")
-            .WithTags("Executable Versions");
+            .WithTags("Executable Versions")
+            .RequireAuthorization();
 
         group.MapGet("/", GetExecutableVersions.Handler);
         group.MapGet("/{versionNumber:int}/parameters", GetVersionParameters.Handler);

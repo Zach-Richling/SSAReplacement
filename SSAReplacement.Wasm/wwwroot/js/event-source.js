@@ -11,6 +11,13 @@
  * @returns {object} Handle with dispose() to close the connection.
  */
 export function connect(url, dotNetRef, eventTypes) {
+  // Append access_token from localStorage for authenticated SSE
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    const separator = url.includes('?') ? '&' : '?';
+    url = url + separator + 'access_token=' + encodeURIComponent(token);
+  }
+
   const source = new EventSource(url);
 
   source.onopen = () => {

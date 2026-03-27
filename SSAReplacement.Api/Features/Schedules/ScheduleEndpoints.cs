@@ -6,7 +6,7 @@ public static class ScheduleEndpoints
 {
     public static void MapScheduleEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/schedules").WithTags("Schedules");
+        var group = app.MapGroup("/schedules").WithTags("Schedules").RequireAuthorization();
 
         group.MapGet("/", GetSchedules.Handler);
         group.MapGet("/{id:long}", GetScheduleById.Handler);

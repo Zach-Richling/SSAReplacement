@@ -6,7 +6,7 @@ public static class ExecutableEndpoints
 {
     public static void MapExecutableEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/executables").WithTags("Executables");
+        var group = app.MapGroup("/executables").WithTags("Executables").RequireAuthorization();
 
         group.MapGet("/", GetExecutables.Handler);
         group.MapGet("/{id:long}", GetExecutableById.Handler);

@@ -1,0 +1,59 @@
+@inject SsaApiClient Api
+@inject TokenStorageService TokenStorage
+@inject JwtAuthenticationStateProvider AuthState
+
+<div class="flex items-center justify-center h-screen">
+    @if (_error is not null)
+    {
+        <div class="text-center">
+            <p class="text-destructive mb-4">@_error</p>
+            <BbButton Size="ButtonSize.Small" OnClick="AuthenticateAsync">
+                <Icon>
+                    <LucideIcon Name="rotate-ccw" Class="h-4 w-4" />
+                </Icon>
+                <ChildContent>Retry</ChildContent>
+            </BbButton>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted-foreground">Authenticating with Windows credentials...</p>
+    }
+</div>
+
+@code {
+    private string? _error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthenticateAsync();
+        }
+    }
+
+    private async Task AuthenticateAsync()
+    {
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await Api.Auth.GetTokenAsync();
+            if (result is null)
+            {
+                _error = "Windows authentication failed. Please check your credentials.";
+                StateHasChanged();
+                return;
+            }
+
+            await TokenStorage.SetTokensAsync(result.AccessToken, result.RefreshToken);
+            AuthState.NotifyAuthenticationStateChanged();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Authentication error: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+}

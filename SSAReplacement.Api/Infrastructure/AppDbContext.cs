@@ -19,6 +19,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<JobRunStep> JobRunSteps => Set<JobRunStep>();
     public DbSet<JobLog> JobLogs => Set<JobLog>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Job>().ToTable("Job");
@@ -105,6 +107,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         modelBuilder.Entity<Schedule>(b =>
         {
             b.HasKey(s => s.Id);
+        });
+
+        modelBuilder.Entity<RefreshToken>(b =>
+        {
+            b.ToTable("RefreshToken");
+            b.HasKey(rt => rt.Id);
         });
     }
 }

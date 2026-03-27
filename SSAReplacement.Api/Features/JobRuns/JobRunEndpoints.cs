@@ -6,7 +6,7 @@ public static class JobRunEndpoints
 {
     public static void MapJobRunEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/runs").WithTags("Job Runs");
+        var group = app.MapGroup("/runs").WithTags("Job Runs").RequireAuthorization();
 
         group.MapGet("/{id:long}", GetJobRunById.Handler);
         group.MapGet("/{id:long}/logs", GetJobRunLogs.Handler);

@@ -1,7 +1,10 @@
-﻿@using BlazorBlueprint.Primitives.Services
+@using BlazorBlueprint.Primitives.Services
 @inherits LayoutComponentBase
 
 @inject BreadcrumbService BreadcrumbService
+@inject SSAReplacement.Wasm.Auth.TokenStorageService TokenStorage
+@inject SSAReplacement.Wasm.Auth.JwtAuthenticationStateProvider AuthState
+@inject SSAReplacement.Wasm.Client.SsaApiClient Api
 
 <BbSidebarProvider Variant="SidebarVariant.Floating" HeightClass="h-screen">
     <BbSidebar>
@@ -43,13 +46,20 @@
         </BbSidebarContent>
         <BbSidebarFooter>
             <div class="flex items-center gap-2 px-2 py-2">
-                <BbAvatar Size="AvatarSize.Small">
-                    <BbAvatarFallback>AJ</BbAvatarFallback>
-                </BbAvatar>
-                <div class="flex flex-col flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <span class="text-sm font-medium truncate">Alex Johnson</span>
-                    <span class="text-xs text-muted-foreground truncate">alex@example.com</span>
-                </div>
+                <AuthorizeView>
+                    <Authorized>
+                        <BbAvatar Size="AvatarSize.Small">
+                            @if (_photoDataUrl is not null)
+                            {
+                                <BbAvatarImage Src="@_photoDataUrl" Alt="@GetUsername(context.User)" />
+                            }
+                            <BbAvatarFallback>@GetInitials(context.User)</BbAvatarFallback>
+                        </BbAvatar>
+                        <div class="flex flex-col flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+                            <span class="text-sm font-medium truncate">@GetUsername(context.User)</span>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
             </div>
         </BbSidebarFooter>
     </BbSidebar>
@@ -91,6 +101,49 @@
 <BbToastProvider />
 
 @code {
-    protected override void OnInitialized() => BreadcrumbService.OnChange += StateHasChanged;
-}
+    private string? _photoDataUrl;
 
+    protected override void OnInitialized() => BreadcrumbService.OnChange += StateHasChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _photoDataUrl = await Api.Auth.GetPhotoDataUrlAsync();
+            StateHasChanged();
+        }
+    }
+
+    private string GetUsername(System.Security.Claims.ClaimsPrincipal user)
+    {
+        return user.FindFirst("name")?.Value
+            ?? user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+            ?? user.Identity?.Name
+            ?? "Unknown";
+    }
+
+    private string GetInitials(System.Security.Claims.ClaimsPrincipal user)
+    {
+        var name = GetUsername(user);
+        if (name.Contains('\\'))
+            name = name.Split('\\').Last();
+        if (name.Contains('@'))
+            name = name.Split('@').First();
+
+        return name.Length >= 2
+            ? name[..2].ToUpper()
+            : name.ToUpper();
+    }
+
+    private async Task LogoutAsync()
+    {
+        var refreshToken = await TokenStorage.GetRefreshTokenAsync();
+        if (!string.IsNullOrEmpty(refreshToken))
+        {
+            try { await Api.Auth.LogoutAsync(refreshToken); } catch { }
+        }
+        await TokenStorage.ClearTokensAsync();
+        _photoDataUrl = null;
+        AuthState.NotifyAuthenticationStateChanged();
+    }
+}
