@@ -206,7 +206,7 @@
         if (_gridState.TotalSelected == 0)
             return;
 
-        var selected = _gridState.Selection.SelectedItems;
+        var selected = _gridState.Selection.SelectedItems.ToList();
 
         var confirm = await Dialogs.ConfirmAsync(
             "Delete jobs?",
@@ -220,15 +220,28 @@
         try
         {
             var deleted = 0;
+            var failed = new List<(string Name, string? Message)>();
+
             foreach (var job in selected)
             {
-                await Api.Job.DeleteJobAsync(job.Id);
-                deleted++;
+                var result = await Api.Job.DeleteJobAsync(job.Id);
+                if (result.Success)
+                    deleted++;
+                else
+                    failed.Add((job.Name, result.Message));
             }
 
-            Toasts.Success($"Deleted {deleted} job(s).");
-            await LoadData();
+            if (deleted > 0)
+                Toasts.Success($"Deleted {deleted} job(s).");
 
+            if (failed.Count > 0)
+            {
+                var names = string.Join(", ", failed.Select(f => f.Name));
+                var reason = failed[0].Message ?? "Job has a running job run.";
+                Toasts.Error($"Could not delete: {names}. {reason}");
+            }
+
+            await LoadData();
             _gridState.Selection.Clear();
         }
         catch (Exception ex)

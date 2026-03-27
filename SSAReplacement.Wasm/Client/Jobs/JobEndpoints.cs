@@ -157,13 +157,32 @@ public class JobEndpoints(HttpClient http)
 
     /// <summary>
     /// DELETE /jobs/{id}. Removes the job.
+    /// Returns a result indicating success or failure with a reason.
     /// </summary>
-    public async Task DeleteJobAsync(long jobId, CancellationToken cancellationToken = default)
+    public async Task<DeleteJobResult> DeleteJobAsync(long jobId, CancellationToken cancellationToken = default)
     {
         var res = await http.DeleteAsync($"jobs/{jobId}", cancellationToken);
+
         if (res.StatusCode == HttpStatusCode.NotFound)
-            return;
+            return new DeleteJobResult(true, null, null);
+
+        if (res.StatusCode == HttpStatusCode.Conflict)
+        {
+            var problem = await res.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+            return new DeleteJobResult(false, problem?.Title, problem?.Detail);
+        }
 
         res.EnsureSuccessStatusCode();
+        return new DeleteJobResult(true, null, null);
     }
+}
+
+public record DeleteJobResult(bool Success, string? Code, string? Message);
+
+public record ProblemDetails
+{
+    public string? Type { get; init; }
+    public string? Title { get; init; }
+    public int? Status { get; init; }
+    public string? Detail { get; init; }
 }
