@@ -13,7 +13,10 @@ public static class DeleteExecutable
             return Results.NotFound();
 
         if (await db.JobSteps.AnyAsync(s => s.ExecutableId == id))
-            return Results.Conflict("Cannot delete executable that is referenced by one or more job steps.");
+            return Results.Problem(
+                detail: "Cannot delete executable that is referenced by one or more job steps.",
+                statusCode: StatusCodes.Status409Conflict,
+                title: "EXECUTABLE_IN_USE");
 
         db.Executables.Remove(exe);
 

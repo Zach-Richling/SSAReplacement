@@ -144,15 +144,18 @@ public class JobEndpoints(HttpClient http)
     /// POST /runs/{id}/stop. Stops a running job run.
     /// Returns true if the stop was accepted, false if the run was not running or already finished.
     /// </summary>
-    public async Task<bool> StopJobRunAsync(long jobRunId, CancellationToken cancellationToken = default)
+    public async Task<StopJobRunResult> StopJobRunAsync(long jobRunId, CancellationToken cancellationToken = default)
     {
         var res = await http.PostAsync($"runs/{jobRunId}/stop", null, cancellationToken);
 
         if (res.StatusCode == HttpStatusCode.Conflict)
-            return false;
+        {
+            var problem = await res.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+            return new StopJobRunResult(false, problem?.Detail);
+        }
 
         res.EnsureSuccessStatusCode();
-        return true;
+        return new StopJobRunResult(true, null);
     }
 
     /// <summary>
@@ -178,6 +181,8 @@ public class JobEndpoints(HttpClient http)
 }
 
 public record DeleteJobResult(bool Success, string? Code, string? Message);
+
+public record StopJobRunResult(bool Success, string? Message);
 
 public record ProblemDetails
 {

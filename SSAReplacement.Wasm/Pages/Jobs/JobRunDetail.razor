@@ -244,8 +244,8 @@ else
         _stopping = true;
         try
         {
-            var stopped = await Api.Job.StopJobRunAsync(Id);
-            if (stopped)
+            var result = await Api.Job.StopJobRunAsync(Id);
+            if (result.Success)
             {
                 Toasts.Success("Job run stopped successfully");
 
@@ -256,7 +256,7 @@ else
                 JobRun = updated;
             }
             else
-                Toasts.Error("Job run could not be stopped. It may have already finished.");
+                Toasts.Error(result.Message ?? "Job run could not be stopped.");
         }
         catch (Exception)
         {

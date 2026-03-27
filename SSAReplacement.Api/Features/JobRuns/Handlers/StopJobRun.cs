@@ -14,12 +14,18 @@ public static class StopJobRun
             return Results.NotFound();
 
         if (run.Status != JobRunnerService.StatusRunning)
-            return Results.Conflict(new { message = "Job run is not currently running." });
+            return Results.Problem(
+                detail: "Job run is not currently running.",
+                statusCode: StatusCodes.Status409Conflict,
+                title: "JOB_NOT_RUNNING");
 
         var cancelled = cancellationService.TryCancel(id);
 
         if (!cancelled)
-            return Results.Conflict(new { message = "Job run could not be stopped. It may have already finished." });
+            return Results.Problem(
+                detail: "Job run could not be stopped. It may have already finished.",
+                statusCode: StatusCodes.Status409Conflict,
+                title: "STOP_FAILED");
 
         return Results.Ok();
     }
