@@ -1,9 +1,10 @@
 namespace SSAReplacement.Api.Domain;
 
-public class Schedule
+public class Schedule : IAuditable
 {
     public long Id { get; set; }
     public string Name { get; set; } = "";
+    public long? CreatedByUserId { get; set; }
     public required string CronExpression { get; set; }
     public bool IsEnabled { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -6,7 +6,7 @@ namespace SSAReplacement.Api.Features.JobRuns.Handlers;
 
 public static class StopJobRun
 {
-    public static async Task<IResult> Handler(long id, AppDbContext db, JobCancellationService cancellationService)
+    public static async Task<IResult> Handler(long id, AppDbContext db, JobCancellationService cancellationService, AuditService auditService)
     {
         var run = await db.JobRuns.FirstOrDefaultAsync(r => r.Id == id);
 
@@ -26,6 +26,8 @@ public static class StopJobRun
                 detail: "Job run could not be stopped. It may have already finished.",
                 statusCode: StatusCodes.Status409Conflict,
                 title: "STOP_FAILED");
+
+        await auditService.WriteAsync("JobRun", id, "Stopped");
 
         return Results.Ok();
     }

@@ -11,8 +11,8 @@ public static class Refresh
         if (existingToken is null)
             return Results.Unauthorized();
 
-        var accessToken = tokenService.GenerateAccessToken(existingToken.Username, out var expiresAt);
-        var newRefreshToken = await tokenService.GenerateRefreshTokenAsync(existingToken.Username);
+        var accessToken = tokenService.GenerateAccessToken(existingToken.Username, existingToken.UserId, out var expiresAt);
+        var newRefreshToken = await tokenService.GenerateRefreshTokenAsync(existingToken.Username, existingToken.UserId);
 
         await tokenService.RevokeRefreshTokenAsync(existingToken, newRefreshToken.Token);
 

@@ -9,7 +9,7 @@ public static class TriggerJob
 {
     public record TriggerJobRequest(int? StartAtStep = null);
 
-    public static async Task<IResult> Handler(long id, TriggerJobRequest? request, AppDbContext db, IBackgroundJobClient jobClient)
+    public static async Task<IResult> Handler(long id, TriggerJobRequest? request, AppDbContext db, IBackgroundJobClient jobClient, AuditService auditService)
     {
         var exists = await db.Jobs.AnyAsync(j => j.Id == id);
 
@@ -18,6 +18,8 @@ public static class TriggerJob
 
         var startAtStep = request?.StartAtStep;
         jobClient.Enqueue<JobRunnerService>(s => s.RunAsync(id, null, startAtStep));
+
+        await auditService.WriteAsync("Job", id, "Triggered");
 
         return Results.Accepted();
     }

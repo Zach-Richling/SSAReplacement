@@ -1,9 +1,10 @@
 namespace SSAReplacement.Api.Domain;
 
-public class JobRun
+public class JobRun : IAuditable
 {
     public long Id { get; set; }
     public long JobId { get; set; }
+    public long? CreatedByUserId { get; set; }
     public long? ScheduleId { get; set; }
     public int? CurrentStep { get; set; }
     public DateTime StartedAt { get; set; }

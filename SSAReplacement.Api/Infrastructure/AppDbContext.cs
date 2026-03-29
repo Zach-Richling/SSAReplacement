@@ -3,7 +3,7 @@ using SSAReplacement.Api.Domain;
 
 namespace SSAReplacement.Api.Infrastructure;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserService currentUserService) : DbContext(options)
 {
     public DbSet<Schedule> Schedules => Set<Schedule>();
 
@@ -20,6 +20,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<JobLog> JobLogs => Set<JobLog>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    public DbSet<User> Users => Set<User>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +46,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             b.HasMany(j => j.Steps).WithOne(s => s.Job).HasForeignKey(s => s.JobId).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(j => j.JobSchedules).WithOne(js => js.Job).HasForeignKey(js => js.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(j => j.Runs).WithOne(jr => jr.Job).HasForeignKey(jr => jr.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<User>().WithMany().HasForeignKey(j => j.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<JobStep>(b =>
@@ -51,18 +55,21 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             b.HasOne(s => s.Job).WithMany(j => j.Steps).HasForeignKey(s => s.JobId);
             b.HasOne(s => s.Executable).WithMany(e => e.JobSteps).HasForeignKey(s => s.ExecutableId);
             b.HasMany(s => s.Parameters).WithOne(p => p.JobStep).HasForeignKey(p => p.JobStepId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<User>().WithMany().HasForeignKey(s => s.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<JobStepParameter>(b =>
         {
             b.HasKey(e => e.Id);
             b.HasOne(e => e.JobStep).WithMany(s => s.Parameters).HasForeignKey(e => e.JobStepId);
+            b.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<JobSchedule>(b =>
         {
             b.HasKey(e => e.Id);
             b.HasOne(e => e.Schedule).WithMany(s => s.JobSchedules).HasForeignKey(e => e.ScheduleId);
+            b.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<JobRun>(b =>
@@ -71,6 +78,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             b.HasOne(e => e.Job).WithMany(j => j.Runs).HasForeignKey(e => e.JobId);
             b.HasOne(e => e.Schedule).WithMany(s => s.JobRuns).HasForeignKey(e => e.ScheduleId);
             b.HasMany(e => e.RunSteps).WithOne(s => s.JobRun).HasForeignKey(s => s.JobRunId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<JobRunStep>(b =>
@@ -90,12 +98,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         modelBuilder.Entity<Executable>(b =>
         {
             b.HasKey(e => e.Id);
+            b.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<ExecutableVersion>(b =>
         {
             b.HasKey(ev => ev.Id);
             b.HasOne(ev => ev.Executable).WithMany(e => e.Versions).HasForeignKey(ev => ev.ExecutableId);
+            b.HasOne<User>().WithMany().HasForeignKey(ev => ev.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<ExecutableParameter>(b =>
@@ -107,12 +117,87 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         modelBuilder.Entity<Schedule>(b =>
         {
             b.HasKey(s => s.Id);
+            b.HasOne<User>().WithMany().HasForeignKey(s => s.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<RefreshToken>(b =>
         {
             b.ToTable("RefreshToken");
             b.HasKey(rt => rt.Id);
+            b.HasOne<User>().WithMany().HasForeignKey(rt => rt.UserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
+
+        modelBuilder.Entity<User>(b =>
+        {
+            b.ToTable("User");
+            b.HasKey(u => u.Id);
+            b.HasIndex(u => u.Sid).IsUnique();
+            b.HasMany(u => u.AuditEntries).WithOne(a => a.User).HasForeignKey(a => a.UserId).IsRequired(false);
+        });
+
+        modelBuilder.Entity<AuditEntry>(b =>
+        {
+            b.ToTable("AuditEntry");
+            b.HasKey(a => a.Id);
+            b.HasOne(a => a.User).WithMany(u => u.AuditEntries).HasForeignKey(a => a.UserId).IsRequired(false);
+            b.HasIndex(a => a.UserId);
+            b.HasIndex(a => new { a.EntityName, a.EntityId });
+        });
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Snapshot IAuditable entries and their states before save (IDs assigned after INSERT)
+        var auditableEntries = ChangeTracker.Entries()
+            .Where(e => e.Entity is IAuditable &&
+                        e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Select(e => (Entry: e, State: e.State, Entity: (IAuditable)e.Entity))
+            .ToList();
+
+        // Resolve the current user ID once (null for background/system actions)
+        var userId = auditableEntries.Count > 0 ? currentUserService.UserId : null;
+
+        if (auditableEntries.Count > 0)
+        {
+            // Set CreatedByUserId on new entities before the primary save
+            foreach (var (_, state, entity) in auditableEntries)
+            {
+                if (state == EntityState.Added)
+                    entity.CreatedByUserId = userId;
+            }
+        }
+
+        // Primary save — DB assigns IDs to new entities
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        // Write audit entries using IDs now populated on entity objects
+        if (auditableEntries.Count > 0)
+        {
+            var now = DateTime.UtcNow;
+            foreach (var (entry, state, _) in auditableEntries)
+            {
+                var entityId = (long)entry.Property("Id").CurrentValue!;
+                var action = state switch
+                {
+                    EntityState.Added => "Created",
+                    EntityState.Modified => "Updated",
+                    EntityState.Deleted => "Deleted",
+                    _ => "Unknown"
+                };
+
+                AuditEntries.Add(new AuditEntry
+                {
+                    UserId = userId,
+                    EntityName = entry.Entity.GetType().Name,
+                    EntityId = entityId,
+                    Action = action,
+                    OccurredAt = now
+                });
+            }
+
+            await base.SaveChangesAsync(cancellationToken);
+        }
+
+        return result;
     }
 }

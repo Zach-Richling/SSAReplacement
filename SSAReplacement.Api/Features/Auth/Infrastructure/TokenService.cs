@@ -13,19 +13,22 @@ public class TokenService(IOptions<JwtSettings> jwtOptions, AppDbContext db)
 {
     private readonly JwtSettings _jwt = jwtOptions.Value;
 
-    public string GenerateAccessToken(string username, out DateTime expiresAt)
+    public string GenerateAccessToken(string username, long? userId, out DateTime expiresAt)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         expiresAt = DateTime.UtcNow.AddMinutes(_jwt.ExpirationMinutes);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, username),
-            new Claim(JwtRegisteredClaimNames.Name, username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Sub, username),
+            new(JwtRegisteredClaimNames.Name, username),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        if (userId.HasValue)
+            claims.Add(new Claim("uid", userId.Value.ToString()));
 
         var token = new JwtSecurityToken(
             issuer: _jwt.Issuer,
@@ -37,11 +40,12 @@ public class TokenService(IOptions<JwtSettings> jwtOptions, AppDbContext db)
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public async Task<RefreshTokenEntity> GenerateRefreshTokenAsync(string username)
+    public async Task<RefreshTokenEntity> GenerateRefreshTokenAsync(string username, long? userId)
     {
         var refreshToken = new RefreshTokenEntity
         {
             Username = username,
+            UserId = userId,
             Token = Guid.NewGuid().ToString(),
             CreatedAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.AddDays(_jwt.RefreshTokenExpirationDays)

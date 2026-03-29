@@ -1,9 +1,10 @@
 namespace SSAReplacement.Api.Domain;
 
-public class JobStep
+public class JobStep : IAuditable
 {
     public long Id { get; set; }
     public long JobId { get; set; }
+    public long? CreatedByUserId { get; set; }
     public long ExecutableId { get; set; }
     public int StepNumber { get; set; }
     public required string Name { get; set; }

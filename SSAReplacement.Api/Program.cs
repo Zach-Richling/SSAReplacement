@@ -47,6 +47,11 @@ builder.Services.AddSingleton<JobLogQueue>();
 builder.Services.AddSingleton<IJobLogQueue>(sp => sp.GetRequiredService<JobLogQueue>());
 builder.Services.AddHostedService<JobLogWriterBackgroundService>();
 
+// User tracking
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
+builder.Services.AddScoped<AuditService>();
+
 // Application services
 builder.Services.AddSingleton<JobCancellationService>();
 builder.Services.AddScoped<IExecutableStorage, FileSystemExecutableStorage>();
