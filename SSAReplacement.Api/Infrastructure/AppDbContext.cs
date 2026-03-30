@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SSAReplacement.Api.Domain;
 
 namespace SSAReplacement.Api.Infrastructure;
@@ -147,11 +149,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Snapshot IAuditable entries and their states before save (IDs assigned after INSERT)
+        // Snapshot IAuditable entries and their states before save (IDs assigned after INSERT).
+        // Capture OldValues/NewValues now while OriginalValues/CurrentValues are still intact.
         var auditableEntries = ChangeTracker.Entries()
             .Where(e => e.Entity is IAuditable &&
                         e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
-            .Select(e => (Entry: e, State: e.State, Entity: (IAuditable)e.Entity))
+            .Select(e => (
+                Entry: e,
+                State: e.State,
+                Entity: (IAuditable)e.Entity,
+                OldValues: e.State == EntityState.Deleted
+                    ? SerializePropertyValues(e.OriginalValues)
+                    : e.State == EntityState.Modified
+                        ? SerializeChangedOldValues(e)
+                        : null,
+                NewValues: e.State == EntityState.Modified
+                    ? SerializeChangedNewValues(e)
+                    : null   // Added: captured after save; Deleted: null
+            ))
             .ToList();
 
         // Resolve the current user ID once (null for background/system actions)
@@ -160,7 +175,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
         if (auditableEntries.Count > 0)
         {
             // Set CreatedByUserId on new entities before the primary save
-            foreach (var (_, state, entity) in auditableEntries)
+            foreach (var (_, state, entity, _, _) in auditableEntries)
             {
                 if (state == EntityState.Added)
                     entity.CreatedByUserId = userId;
@@ -174,7 +189,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
         if (auditableEntries.Count > 0)
         {
             var now = DateTime.UtcNow;
-            foreach (var (entry, state, _) in auditableEntries)
+            foreach (var (entry, state, _, oldValues, newValues) in auditableEntries)
             {
                 var entityId = (long)entry.Property("Id").CurrentValue!;
                 var action = state switch
@@ -191,7 +206,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
                     EntityName = entry.Entity.GetType().Name,
                     EntityId = entityId,
                     Action = action,
-                    OccurredAt = now
+                    OccurredAt = now,
+                    OldValues = oldValues,
+                    NewValues = state == EntityState.Added
+                        ? SerializePropertyValues(entry.CurrentValues)
+                        : newValues
                 });
             }
 
@@ -200,4 +219,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
         return result;
     }
+
+    private static string SerializePropertyValues(PropertyValues values) =>
+        JsonSerializer.Serialize(
+            values.Properties.ToDictionary(p => p.Name, p => values[p])
+        );
+
+    private static string SerializeChangedOldValues(EntityEntry entry) =>
+        JsonSerializer.Serialize(
+            entry.Properties
+                .Where(p => !Equals(p.OriginalValue, p.CurrentValue))
+                .ToDictionary(p => p.Metadata.Name, p => p.OriginalValue)
+        );
+
+    private static string SerializeChangedNewValues(EntityEntry entry) =>
+        JsonSerializer.Serialize(
+            entry.Properties
+                .Where(p => !Equals(p.OriginalValue, p.CurrentValue))
+                .ToDictionary(p => p.Metadata.Name, p => p.CurrentValue)
+        );
 }
