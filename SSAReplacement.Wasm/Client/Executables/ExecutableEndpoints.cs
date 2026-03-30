@@ -31,16 +31,16 @@ public class ExecutableEndpoints(HttpClient http)
     }
 
     /// <summary>
-    /// POST /executables/{executableId}/versions. Uploads a new version. Requires multipart form: file, entryPointDll. Returns the created version.
+    /// POST /executables/{executableId}/versions. Uploads a new version. Requires multipart form: file, entryPointExe. Returns the created version.
     /// </summary>
-    public async Task<ExecutableVersion> UploadExecutableVersionAsync(long executableId, Stream fileStream, string fileName, string entryPointDll, CancellationToken cancellationToken = default)
+    public async Task<ExecutableVersion> UploadExecutableVersionAsync(long executableId, Stream fileStream, string fileName, string entryPointExe, CancellationToken cancellationToken = default)
     {
         using var content = new MultipartFormDataContent();
 
         var fileContent = new StreamContent(fileStream);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         content.Add(fileContent, "file", fileName);
-        content.Add(new StringContent(entryPointDll), "entryPointDll");
+        content.Add(new StringContent(entryPointExe), "entryPointExe");
 
         var res = await http.PostAsync($"executables/{executableId}/versions", content, cancellationToken);
         res.EnsureSuccessStatusCode();

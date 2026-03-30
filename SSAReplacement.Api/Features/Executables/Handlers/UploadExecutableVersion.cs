@@ -12,7 +12,7 @@ public static class UploadExecutableVersion
     public static async Task<IResult> Handler(
         long executableId,
         IFormFile file,
-        [FromForm] string entryPointDll,
+        [FromForm] string entryPointExe,
         AppDbContext db,
         IExecutableStorage storage)
     {
@@ -24,7 +24,7 @@ public static class UploadExecutableVersion
         {
             ExecutableId = executableId,
             Version = versionNumber,
-            EntryPointDll = entryPointDll.Trim(),
+            EntryPointExe = entryPointExe.Trim(),
             IsActive = false
         };
 
@@ -32,14 +32,28 @@ public static class UploadExecutableVersion
 
         await using var stream = file.OpenReadStream();
         var versionDir = await storage.SaveVersionAsync(executableId, versionNumber, stream);
-        var entryPointPath = Path.Combine(versionDir, version.EntryPointDll);
+        var exePath = Path.Combine(versionDir, version.EntryPointExe);
 
-        if (!File.Exists(entryPointPath))
+        if (!File.Exists(exePath))
         {
-            return Results.BadRequest("Entrypoint Dll is not in the uploaded zip.");
+            if (Directory.Exists(versionDir))
+                Directory.Delete(versionDir, true);
+
+            return Results.BadRequest("Entrypoint exe is not in the uploaded zip.");
         }
 
-        var isParsed = ExecutableLoadContext.TryExtractExecutableParameters(entryPointPath, out var parameters);
+        var dllName = Path.ChangeExtension(version.EntryPointExe, ".dll");
+        var dllPath = Path.Combine(versionDir, dllName);
+
+        if (!File.Exists(dllPath))
+        {
+            if (Directory.Exists(versionDir))
+                Directory.Delete(versionDir, true);
+
+            return Results.BadRequest($"A DLL with the same name as the executable ({dllName}) must be present in the zip for parameter scanning.");
+        }
+
+        var isParsed = ExecutableLoadContext.TryExtractExecutableParameters(dllPath, out var parameters);
 
         if (!isParsed)
         {

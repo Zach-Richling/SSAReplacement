@@ -6,7 +6,7 @@ public class ExecutableVersion : IAuditable
     public long ExecutableId { get; set; }
     public long? CreatedByUserId { get; set; }
     public int Version { get; set; }
-    public string EntryPointDll { get; set; } = "";
+    public string EntryPointExe { get; set; } = "";
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; }
 

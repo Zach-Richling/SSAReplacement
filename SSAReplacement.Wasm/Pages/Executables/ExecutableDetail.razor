@@ -38,7 +38,7 @@ else
                 <BbDataTable Data="_executable.Versions" TData="ExecutableVersion" ShowToolbar="false">
                     <Columns>
                         <BbDataTableColumn Header="Version" TData="ExecutableVersion" TValue="int" Property="x => x.Version"/>
-                        <BbDataTableColumn Header="Entry Point DLL" TData="ExecutableVersion" TValue="string" Property="x => x.EntryPointDll" />
+                        <BbDataTableColumn Header="Entry Point Exe" TData="ExecutableVersion" TValue="string" Property="x => x.EntryPointExe" />
                         <BbDataTableColumn Header="Uploaded At" TData="ExecutableVersion" TValue="DateTime" Property="x => x.UploadedAt">
                             <CellTemplate Context="version">
                                 @version.UploadedAt.ToTimeAgo()

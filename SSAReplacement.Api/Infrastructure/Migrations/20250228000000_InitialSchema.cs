@@ -77,7 +77,7 @@ public sealed class InitialSchema : Migration
             .WithColumn("Id").AsInt64().PrimaryKey().Identity()
             .WithColumn("ExecutableId").AsInt64().NotNullable()
             .WithColumn("Version").AsInt32().NotNullable()
-            .WithColumn("EntryPointDll").AsString(256).NotNullable()
+            .WithColumn("EntryPointExe").AsString(256).NotNullable()
             .WithColumn("UploadedAt").AsDateTime2().NotNullable()
             .WithColumn("IsActive").AsBoolean().NotNullable();
 

@@ -90,11 +90,11 @@ public sealed class JobRunnerService(
                 }
 
                 var versionDir = storage.GetVersionDirectory(step.ExecutableId, activeVersion.Version);
-                var dllPath = Path.Combine(versionDir, activeVersion.EntryPointDll);
+                var exePath = Path.Combine(versionDir, activeVersion.EntryPointExe);
 
-                if (!File.Exists(dllPath))
+                if (!File.Exists(exePath))
                 {
-                    logger.LogError("Entry point DLL not found for step {StepNumber}: {Path}", step.StepNumber, dllPath);
+                    logger.LogError("Entry point exe not found for step {StepNumber}: {Path}", step.StepNumber, exePath);
                     run.FinishedAt = DateTime.UtcNow;
                     run.Status = StatusFailed;
                     run.ExitCode = -1;
@@ -126,8 +126,8 @@ public sealed class JobRunnerService(
 
                 try
                 {
-                    process.StartInfo.FileName = "dotnet";
-                    process.StartInfo.Arguments = $"\"{activeVersion.EntryPointDll}\"";
+                    process.StartInfo.FileName = exePath;
+                    process.StartInfo.Arguments = "";
                     process.StartInfo.WorkingDirectory = versionDir;
                     process.StartInfo.UseShellExecute = false;
                     process.StartInfo.RedirectStandardOutput = true;

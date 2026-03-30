@@ -1,4 +1,3 @@
-using System.Text;
 using FluentMigrator.Runner;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,17 +7,17 @@ using Scalar.AspNetCore;
 using SSAReplacement.Api.Common.JobLogWriter;
 using SSAReplacement.Api.Features.Auth;
 using SSAReplacement.Api.Features.Auth.Infrastructure;
-using Microsoft.Extensions.Options;
+using SSAReplacement.Api.Features.Dashboard;
 using SSAReplacement.Api.Features.Executables;
 using SSAReplacement.Api.Features.Executables.Infrastructure;
 using SSAReplacement.Api.Features.JobRuns;
 using SSAReplacement.Api.Features.JobRuns.Infrastructure;
 using SSAReplacement.Api.Features.Jobs;
 using SSAReplacement.Api.Features.Jobs.Infrastructure;
-using SSAReplacement.Api.Features.Dashboard;
 using SSAReplacement.Api.Features.Schedules;
 using SSAReplacement.Api.Features.Schedules.Infrastructure;
 using SSAReplacement.Api.Infrastructure;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 

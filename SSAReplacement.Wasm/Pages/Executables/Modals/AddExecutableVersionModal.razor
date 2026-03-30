@@ -17,15 +17,32 @@
         <EditForm EditContext="_editContext" OnValidSubmit="SubmitAddExecutableVersion" id="add-executable-version-form">
             <DataAnnotationsValidator />
 
-            <BbField Class="mt-4">
-                <BbFieldLabel For="executable-entrypoint">Entrypoint Dll</BbFieldLabel>
-                <BbInputField TValue="string" @bind-Value="_formState.EntryPointDll" Id="executable-entrypoint" />
-                <ValidationMessage For="() => _formState.EntryPointDll" />
-            </BbField>
-
-            <BbFileUpload MaxFileCount="1" Accept=".zip" Class="mt-4" @bind-Files="_formState.SelectedFile" />
+            <BbFileUpload MaxFileCount="1" Accept=".zip" Class="mt-4" @bind-Files="_formState.SelectedFile" @bind-Files:after="OnFileChanged" />
             <ValidationMessage For="() => _formState.SelectedFile" class="mt-2 validation-message" />
 
+            @if (_noExeError is not null)
+            {
+                <p class="mt-2 validation-message">@_noExeError</p>
+            }
+            else if (_detectedExes is not null && _detectedExes.Count > 1)
+            {
+                <BbField Class="mt-4">
+                    <BbFieldLabel>Entry Point Executable</BbFieldLabel>
+                    <BbSelect TValue="string"
+                              @bind-Value="_selectedExe"
+                              Options="_exeOptions"
+                              Placeholder="Select an executable..." />
+                </BbField>
+            }
+            else if (_selectedExe is not null)
+            {
+                <p class="mt-2 text-sm text-muted-foreground">Entry point: <span class="font-mono">@_selectedExe</span></p>
+            }
+
+            @if (_noDllError is not null)
+            {
+                <p class="mt-1 validation-message">@_noDllError</p>
+            }
         </EditForm>
         <BbDialogFooter>
             <BbButton Type="ButtonType.Submit" form="add-executable-version-form" Loading="_submitting" Size="ButtonSize.Small">
@@ -59,6 +76,12 @@
     private bool isOpen = false;
     private bool _submitting;
 
+    private List<string>? _detectedExes;
+    private List<SelectOption<string>>? _exeOptions;
+    private string? _selectedExe;
+    private string? _noExeError;
+    private string? _noDllError;
+
     private const long MaxAllowedFileSize = 1024 * 1024 * 10;
 
     protected override void OnParametersSet()
@@ -74,38 +97,70 @@
         _validationMessageStore = new(_editContext);
     }
 
+    private async Task OnFileChanged()
+    {
+        _detectedExes = null;
+        _exeOptions = null;
+        _selectedExe = null;
+        _noExeError = null;
+        _noDllError = null;
+
+        if (_formState.SelectedFile is not { Count: 1 })
+            return;
+
+        var selectedFile = _formState.SelectedFile[0];
+
+        using var memoryStream = new MemoryStream();
+        await selectedFile.File.OpenReadStream(MaxAllowedFileSize).CopyToAsync(memoryStream);
+
+        using var zip = new ZipArchive(memoryStream, ZipArchiveMode.Read);
+        var exeNames = zip.Entries
+            .Select(e => e.Name)
+            .Where(n => n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (exeNames.Count == 0)
+        {
+            _noExeError = "No executables (.exe) found in this zip file.";
+            return;
+        }
+
+        _detectedExes = exeNames;
+        _exeOptions = exeNames.Select(SelectOption.FromValue).ToList();
+
+        if (exeNames.Count == 1)
+            _selectedExe = exeNames[0];
+    }
+
     private async Task SubmitAddExecutableVersion()
     {
-        long? executableVersionId;
+        _noDllError = null;
+
+        if (_selectedExe is null)
+        {
+            _noExeError = "Please select an entry point executable.";
+            return;
+        }
+
+        var selectedFile = _formState.SelectedFile[0];
+
+        using var memoryStream = new MemoryStream();
+        await selectedFile.File.OpenReadStream(MaxAllowedFileSize).CopyToAsync(memoryStream);
+
+        using var zip = new ZipArchive(memoryStream, ZipArchiveMode.Read);
+
+        var expectedDll = Path.ChangeExtension(_selectedExe, ".dll");
+        if (!zip.Entries.Select(e => e.Name).Contains(expectedDll, StringComparer.OrdinalIgnoreCase))
+        {
+            _noDllError = $"A matching DLL ({expectedDll}) must exist in the zip for parameter scanning.";
+            return;
+        }
 
         _submitting = true;
         try
         {
-            var selectedFile = _formState.SelectedFile[0];
-
-            using var memoryStream = new MemoryStream();
-            await selectedFile.File.OpenReadStream(MaxAllowedFileSize).CopyToAsync(memoryStream);
-
-            //We need a seekable stream to check the contents of the zip file
-            using var zip = new ZipArchive(memoryStream, ZipArchiveMode.Read);
-
-            var fieldId = new FieldIdentifier(_formState, nameof(_formState.EntryPointDll));
-            _validationMessageStore.Clear(fieldId);
-
-            //Verify the entry point dll is in the zip file
-            if (!zip.Entries.Select(x => x.Name).Contains(_formState.EntryPointDll))
-            {
-                _validationMessageStore.Add(fieldId, "This Dll is not in the zip file.");
-                _editContext.NotifyValidationStateChanged();
-                return;
-            }
-
-            memoryStream.Seek(0, SeekOrigin.Begin);
-
-            //Grabbing a new stream so the old one can be disposed to minimize memory usage
             await using var fileStream = selectedFile.File.OpenReadStream(MaxAllowedFileSize);
-            var version = await Api.Executable.UploadExecutableVersionAsync(Executable.Id, fileStream, selectedFile.Name, _formState.EntryPointDll);
-            executableVersionId = version.Id;
+            var version = await Api.Executable.UploadExecutableVersionAsync(Executable.Id, fileStream, selectedFile.Name, _selectedExe);
 
             if (OnExecutableVersionCreated.HasDelegate)
             {
@@ -133,9 +188,5 @@
     {
         [Length(1, 1, ErrorMessage = "Please choose a zip file.")]
         public IReadOnlyList<FileUploadItem> SelectedFile { get; set; } = [];
-
-        [Required(ErrorMessage = "Please choose an entrypoint for the executable.")]
-        [RegularExpression(@".+\.dll", ErrorMessage = "Make sure the selected file is a dll.")]
-        public string EntryPointDll { get; set; } = "";
     }
 }
