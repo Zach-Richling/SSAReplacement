@@ -14,6 +14,7 @@ using SSAReplacement.Api.Features.JobRuns;
 using SSAReplacement.Api.Features.JobRuns.Infrastructure;
 using SSAReplacement.Api.Features.Jobs;
 using SSAReplacement.Api.Features.Jobs.Infrastructure;
+using SSAReplacement.Api.Features.Admin;
 using SSAReplacement.Api.Features.Schedules;
 using SSAReplacement.Api.Features.Schedules.Infrastructure;
 using SSAReplacement.Api.Infrastructure;
@@ -139,6 +140,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapHangfireDashboard();
 
+app.MapAdminEndpoints();
 app.MapScheduleEndpoints();
 app.MapExecutableEndpoints();
 app.MapExecutableVersionEndpoints();

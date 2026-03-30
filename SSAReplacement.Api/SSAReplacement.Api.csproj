@@ -10,6 +10,9 @@
   <ItemGroup>
     <PackageReference Include="Cronos" Version="0.11.1" />
     <PackageReference Include="EFCore.BulkExtensions.SqlServer" Version="10.0.1" />
+    <PackageReference Include="Facet" Version="5.8.4" />
+    <PackageReference Include="Facet.Extensions" Version="5.8.4" />
+    <PackageReference Include="Facet.Extensions.EFCore" Version="5.8.4" />
     <PackageReference Include="FluentMigrator" Version="8.0.1" />
     <PackageReference Include="FluentMigrator.Runner" Version="8.0.1" />
     <PackageReference Include="FluentMigrator.Runner.SQLite" Version="8.0.1" />

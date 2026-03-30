@@ -1,0 +1,129 @@
+@page "/admin/audit"
+@using SSAReplacement.Wasm.Pages.Admin.Components
+@using SSAReplacement.Wasm.Pages.Admin.Modals
+
+@inject SsaApiClient Api
+@inject NavigationManager Nav
+@inject BreadcrumbService Breadcrumbs
+
+<PageTitle>Audit Log</PageTitle>
+
+<div class="flex flex-row justify-between items-center gap-3 flex-wrap">
+    <h1 class="text-lg font-semibold m-0">Audit Log</h1>
+    <div class="flex items-center gap-2 flex-1" style="max-width: 40rem;">
+        <div class="flex-1">
+            <SearchBar @bind-Value="_searchQuery" AriaLabel="Filter by entity name" Placeholder="Filter by entity name…" />
+        </div>
+        <select class="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs" @bind="_actionFilter" @bind:after="LoadData">
+            <option value="">All actions</option>
+            <option value="Created">Created</option>
+            <option value="Updated">Updated</option>
+            <option value="Deleted">Deleted</option>
+        </select>
+    </div>
+</div>
+
+@if (_error is not null)
+{
+    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
+}
+
+<BbDataTable Data="_filteredEntries" TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" ShowToolbar="false" Class="mt-4" IsLoading="_loading" InitialPageSize="10">
+    <Columns>
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="string" Property="@(x => x.User != null ? x.User.Username : "")" Header="User">
+            <CellTemplate Context="entry">
+                @if (entry.User is not null)
+                {
+                    <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" OnClick="() => NavigateToUser(entry.User.Id)">
+                        <Icon>
+                            <LucideIcon Name="user" Class="h-4 w-4" />
+                        </Icon>
+                        <ChildContent>@entry.User.Username</ChildContent>
+                    </BbButton>
+                }
+                else
+                {
+                    <span class="text-muted-foreground text-sm">System</span>
+                }
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="string" Property="@(x => x.EntityName)" Header="Entity" Sortable>
+            <CellTemplate Context="entry">
+                <EntityLink EntityName="@entry.EntityName" EntityId="entry.EntityId" />
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="long" Property="@(x => x.EntityId)" Header="Entity ID" />
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="string" Property="@(x => x.Action)" Header="Action">
+            <CellTemplate Context="entry">
+                <BbBadge Variant="@GetActionVariant(entry.Action)">@entry.Action</BbBadge>
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="DateTime" Property="@(x => x.OccurredAt)" Header="Changed At" Sortable>
+            <CellTemplate Context="entry">
+                @entry.OccurredAt.ToTimeAgo()
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="string" Header="Changes">
+            <CellTemplate Context="entry">
+                <AuditValuesModal Entry="entry" />
+            </CellTemplate>
+        </BbDataTableColumn>
+    </Columns>
+    <EmptyTemplate>
+        <tr class="flex flex-row justify-center">
+            <td colspan="6" class="p-4 text-center text-muted">No audit entries found.</td>
+        </tr>
+    </EmptyTemplate>
+</BbDataTable>
+
+@code {
+    private List<SSAReplacement.Wasm.Client.Admin.AuditEntry> _entries = [];
+    private string _searchQuery = "";
+    private string _actionFilter = "";
+    private bool _loading = true;
+    private string? _error;
+
+    private IEnumerable<SSAReplacement.Wasm.Client.Admin.AuditEntry> _filteredEntries =>
+        string.IsNullOrWhiteSpace(_searchQuery)
+            ? _entries
+            : _entries.Where(e => e.EntityName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)
+                               || (e.User?.Username.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    protected override async Task OnInitializedAsync()
+    {
+        Breadcrumbs.Set(
+            new BreadcrumbItem { Text = "Admin" },
+            new BreadcrumbItem { Text = "Audit Log" }
+        );
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _entries = await Api.Admin.GetAuditEntriesAsync(
+                action: string.IsNullOrEmpty(_actionFilter) ? null : _actionFilter);
+        }
+        catch (Exception ex)
+        {
+            _error = "Failed to load: " + ex.Message;
+            _entries = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void NavigateToUser(long id) => Nav.NavigateTo($"/admin/users/{id}");
+
+    private static BadgeVariant GetActionVariant(string action) => action switch
+    {
+        "Created" => BadgeVariant.Default,
+        "Deleted" => BadgeVariant.Destructive,
+        _ => BadgeVariant.Secondary
+    };
+}

@@ -1,0 +1,24 @@
+@if (_url is not null)
+{
+    <a href="@_url" class="underline decoration-dotted underline-offset-2 hover:decoration-solid">@EntityName</a>
+}
+else
+{
+    @EntityName
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public required string EntityName { get; set; }
+
+    [Parameter, EditorRequired]
+    public long EntityId { get; set; }
+
+    private string? _url => EntityName switch
+    {
+        "Job" => $"/jobs/{EntityId}",
+        "Executable" => $"/executables/{EntityId}",
+        "Schedule" => "/schedules",
+        _ => null
+    };
+}

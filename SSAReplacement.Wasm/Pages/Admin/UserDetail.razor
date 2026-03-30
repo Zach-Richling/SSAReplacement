@@ -1,0 +1,118 @@
+@page "/admin/users/{Id:long}"
+@using SSAReplacement.Wasm.Pages.Admin.Components
+@using SSAReplacement.Wasm.Pages.Admin.Modals
+
+@inject SsaApiClient Api
+@inject BreadcrumbService Breadcrumbs
+@inject ToastService Toasts
+
+<PageTitle>@(_user?.Username ?? "User")</PageTitle>
+
+@if (_loading)
+{
+    <BbAlert Variant="AlertVariant.Default" Class="mt-4">Loading...</BbAlert>
+}
+else if (_user is null)
+{
+    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">User not found.</BbAlert>
+}
+else
+{
+    <BbCard>
+        <BbCardHeader>User Details</BbCardHeader>
+        <BbCardContent>
+            <div class="grid grid-cols-2 gap-1" style="max-width: 30rem;">
+                <div class="font-medium">Username</div>
+                <div>@_user.Username</div>
+
+                <div class="font-medium">SID</div>
+                <div class="font-mono text-sm">@_user.Sid</div>
+
+                <div class="font-medium">First Seen</div>
+                <div>@_user.FirstSeenAt.ToTimeAgo()</div>
+
+                <div class="font-medium">Last Seen</div>
+                <div>@_user.LastSeenAt.ToTimeAgo()</div>
+            </div>
+        </BbCardContent>
+    </BbCard>
+
+    <BbCard Class="mt-3">
+        <BbCardHeader>Audit History</BbCardHeader>
+        <BbCardContent>
+            <BbDataTable Data="_user.AuditEntries" TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" ShowToolbar="false">
+                <Columns>
+                    <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="string" Property="@(x => x.EntityName)" Header="Entity" Sortable>
+                        <CellTemplate Context="entry">
+                            <EntityLink EntityName="@entry.EntityName" EntityId="entry.EntityId" />
+                        </CellTemplate>
+                    </BbDataTableColumn>
+                    <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="long" Property="@(x => x.EntityId)" Header="Entity ID" />
+                    <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="string" Property="@(x => x.Action)" Header="Action">
+                        <CellTemplate Context="entry">
+                            <BbBadge Variant="@GetActionVariant(entry.Action)">@entry.Action</BbBadge>
+                        </CellTemplate>
+                    </BbDataTableColumn>
+                    <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="DateTime" Property="@(x => x.OccurredAt)" Header="Changed At" Sortable>
+                        <CellTemplate Context="entry">
+                            @entry.OccurredAt.ToTimeAgo()
+                        </CellTemplate>
+                    </BbDataTableColumn>
+                    <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.AuditEntry" TValue="string" Header="Changes">
+                        <CellTemplate Context="entry">
+                            <AuditValuesModal Entry="entry" />
+                        </CellTemplate>
+                    </BbDataTableColumn>
+                </Columns>
+                <EmptyTemplate>
+                    <tr class="flex flex-row justify-center">
+                        <td colspan="5" class="p-4 text-center text-muted">No audit entries found.</td>
+                    </tr>
+                </EmptyTemplate>
+            </BbDataTable>
+        </BbCardContent>
+    </BbCard>
+}
+
+@code {
+    [Parameter]
+    public long Id { get; set; }
+
+    private SSAReplacement.Wasm.Client.Admin.UserDetail? _user;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+
+        Breadcrumbs.Set(
+            new BreadcrumbItem { Text = "Admin" },
+            new BreadcrumbItem { Text = "Users", Url = "/admin/users" },
+            new BreadcrumbItem { Text = _user?.Username ?? "Not Found" }
+        );
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            _user = await Api.Admin.GetUserAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Toasts.Error("Failed to load: " + ex.Message);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static BadgeVariant GetActionVariant(string action) => action switch
+    {
+        "Created" => BadgeVariant.Default,
+        "Deleted" => BadgeVariant.Destructive,
+        _ => BadgeVariant.Secondary
+    };
+}

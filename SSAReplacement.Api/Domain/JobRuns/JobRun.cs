@@ -1,6 +1,6 @@
 namespace SSAReplacement.Api.Domain;
 
-public class JobRun : IAuditable
+public class JobRun
 {
     public long Id { get; set; }
     public long JobId { get; set; }

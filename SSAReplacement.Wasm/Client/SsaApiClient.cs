@@ -1,3 +1,4 @@
+using SSAReplacement.Wasm.Client.Admin;
 using SSAReplacement.Wasm.Client.Auth;
 using SSAReplacement.Wasm.Client.Dashboard;
 using SSAReplacement.Wasm.Client.Executables;
@@ -16,4 +17,5 @@ public class SsaApiClient(HttpClient http)
     public readonly JobEndpoints Job = new(http);
     public readonly ExecutableEndpoints Executable = new(http);
     public readonly ScheduleEndpoints Schedule = new(http);
+    public readonly AdminEndpoints Admin = new(http);
 }

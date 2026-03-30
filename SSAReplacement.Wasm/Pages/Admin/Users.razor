@@ -1,0 +1,93 @@
+@page "/admin/users"
+
+@inject SsaApiClient Api
+@inject NavigationManager Nav
+@inject BreadcrumbService Breadcrumbs
+
+<PageTitle>Users</PageTitle>
+
+<div class="flex flex-row justify-between items-center">
+    <h1 class="text-lg font-semibold m-0">Users</h1>
+    <div class="flex items-center flex-1 ml-4" style="max-width: 20rem;">
+        <SearchBar @bind-Value="_searchQuery" AriaLabel="Filter users by username" />
+    </div>
+</div>
+
+@if (_error is not null)
+{
+    <BbAlert Variant="AlertVariant.Danger" Class="mt-4">@_error</BbAlert>
+}
+
+<BbDataTable Data="_filteredUsers" TData="SSAReplacement.Wasm.Client.Admin.User" ShowToolbar="false" Class="mt-4" IsLoading="_loading">
+    <Columns>
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.User" TValue="string" Property="@(x => x.Username)" Header="Username" Sortable />
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.User" TValue="string" Property="@(x => x.Sid)" Header="SID" />
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.User" TValue="DateTime" Property="@(x => x.FirstSeenAt)" Header="First Seen">
+            <CellTemplate Context="user">
+                @user.FirstSeenAt.ToTimeAgo()
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.User" TValue="DateTime" Property="@(x => x.LastSeenAt)" Header="Last Seen">
+            <CellTemplate Context="user">
+                @user.LastSeenAt.ToTimeAgo()
+            </CellTemplate>
+        </BbDataTableColumn>
+        <BbDataTableColumn TData="SSAReplacement.Wasm.Client.Admin.User" TValue="string" Header="Actions">
+            <CellTemplate Context="user">
+                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="() => NavigateToUser(user.Id)">
+                    <Icon>
+                        <LucideIcon Name="eye" Class="h-4 w-4" />
+                    </Icon>
+                    <ChildContent>View</ChildContent>
+                </BbButton>
+            </CellTemplate>
+        </BbDataTableColumn>
+    </Columns>
+    <EmptyTemplate>
+        <tr class="flex flex-row justify-center">
+            <td colspan="5" class="p-4 text-center text-muted">No users found.</td>
+        </tr>
+    </EmptyTemplate>
+</BbDataTable>
+
+@code {
+    private List<SSAReplacement.Wasm.Client.Admin.User> _users = [];
+    private string _searchQuery = "";
+    private bool _loading = true;
+    private string? _error;
+
+    private IEnumerable<SSAReplacement.Wasm.Client.Admin.User> _filteredUsers =>
+        string.IsNullOrWhiteSpace(_searchQuery)
+            ? _users
+            : _users.Where(u => u.Username.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        Breadcrumbs.Set(
+            new BreadcrumbItem { Text = "Admin" },
+            new BreadcrumbItem { Text = "Users" }
+        );
+        await LoadData();
+    }
+
+    private void NavigateToUser(long id) => Nav.NavigateTo($"/admin/users/{id}");
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _users = await Api.Admin.GetUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = "Failed to load: " + ex.Message;
+            _users = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

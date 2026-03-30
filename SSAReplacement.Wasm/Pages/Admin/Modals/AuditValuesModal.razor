@@ -1,0 +1,123 @@
+@using System.Text.Json
+@using SSAReplacement.Wasm.Client.Admin
+
+@if (_hasValues)
+{
+    <BbDialog @bind-Open="_open">
+        <BbDialogTrigger>
+            <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small">
+                <Icon>
+                    <LucideIcon Name="diff" Class="h-4 w-4" />
+                </Icon>
+                <ChildContent>@_summary</ChildContent>
+            </BbButton>
+        </BbDialogTrigger>
+        <BbDialogContent Class="max-w-2xl">
+            <BbDialogHeader>
+                <BbDialogTitle>@Entry.EntityName #@Entry.EntityId - @Entry.Action</BbDialogTitle>
+            </BbDialogHeader>
+            <div class="overflow-auto max-h-[60vh]">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b">
+                            <th class="text-left py-2 pr-4 font-medium text-muted-foreground w-1/4">Field</th>
+                            <th class="text-left py-2 pr-4 font-medium text-muted-foreground w-[37.5%]">Before</th>
+                            <th class="text-left py-2 font-medium text-muted-foreground w-[37.5%]">After</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _rows)
+                        {
+                            <tr class="border-b last:border-0 @(row.Changed ? "bg-amber-500/10" : "")">
+                                <td class="py-2 pr-4 font-mono font-medium align-top">@row.Field</td>
+                                <td class="py-2 pr-4 font-mono text-muted-foreground align-top break-all">
+                                    @if (row.OldValue is not null)
+                                    {
+                                        @row.OldValue
+                                    }
+                                    else
+                                    {
+                                        <span class="italic opacity-50">-</span>
+                                    }
+                                </td>
+                                <td class="py-2 font-mono align-top break-all">
+                                    @if (row.NewValue is not null)
+                                    {
+                                        @row.NewValue
+                                    }
+                                    else
+                                    {
+                                        <span class="italic opacity-50">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </BbDialogContent>
+    </BbDialog>
+}
+else
+{
+    <span class="text-sm text-muted-foreground">-</span>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public required AuditEntry Entry { get; set; }
+
+    private bool _open;
+    private bool _hasValues;
+    private string _summary = "";
+    private List<DiffRow> _rows = [];
+
+    protected override void OnParametersSet()
+    {
+        var old = ParseJson(Entry.OldValues);
+        var @new = ParseJson(Entry.NewValues);
+
+        _hasValues = old.Count > 0 || @new.Count > 0;
+
+        if (!_hasValues)
+            return;
+
+        _rows = old.Keys.Union(@new.Keys)
+            .OrderBy(k => k)
+            .Select(k =>
+            {
+                var oldVal = old.GetValueOrDefault(k);
+                var newVal = @new.GetValueOrDefault(k);
+                return new DiffRow(k, oldVal, newVal, oldVal != newVal);
+            })
+            .ToList();
+
+        var changedCount = _rows.Count(r => r.Changed);
+
+        _summary = (old.Count == 0, @new.Count == 0) switch
+        {
+            (true, false) => $"{@new.Count} fields",
+            (false, true) => $"{old.Count} fields",
+            _ => changedCount == 1 ? "1 field" : $"{changedCount} fields"
+        };
+    }
+
+    private static Dictionary<string, string?> ParseJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return [];
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.EnumerateObject()
+                .ToDictionary(p => p.Name, p => p.Value.ValueKind == JsonValueKind.Null ? null : p.Value.ToString());
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private record DiffRow(string Field, string? OldValue, string? NewValue, bool Changed);
+}
