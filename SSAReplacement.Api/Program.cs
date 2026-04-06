@@ -124,6 +124,23 @@ using (var scope = app.Services.CreateScope())
     var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
     runner.MigrateUp();
 
+    // Clean up any job runs left in Running state from a non-graceful shutdown
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var now = DateTime.UtcNow;
+
+    await db.JobRuns
+        .Where(r => r.Status == JobRunnerService.StatusRunning)
+        .ExecuteUpdateAsync(s => s
+            .SetProperty(r => r.Status, JobRunnerService.StatusStopped)
+            .SetProperty(r => r.FinishedAt, now));
+
+    await db.JobRunSteps
+        .IgnoreQueryFilters()
+        .Where(s => s.Status == JobRunnerService.StatusRunning)
+        .ExecuteUpdateAsync(s => s
+            .SetProperty(r => r.Status, JobRunnerService.StatusStopped)
+            .SetProperty(r => r.FinishedAt, now));
+
     var sync = scope.ServiceProvider.GetRequiredService<IScheduleHangfireSyncService>();
     await sync.SyncAllSchedulesAsync();
 }
