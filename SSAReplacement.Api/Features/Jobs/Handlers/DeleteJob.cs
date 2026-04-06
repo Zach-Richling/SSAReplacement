@@ -8,7 +8,11 @@ public static class DeleteJob
 {
     public static async Task<IResult> Handler(long id, AppDbContext db)
     {
-        var j = await db.Jobs.FindAsync(id);
+        var j = await db.Jobs
+            .Include(j => j.Steps).ThenInclude(s => s.Parameters)
+            .Include(j => j.JobSchedules)
+            .Include(j => j.Runs)
+            .FirstOrDefaultAsync(j => j.Id == id);
 
         if (j is null)
             return Results.NotFound();

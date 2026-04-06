@@ -7,7 +7,9 @@ public static class DeleteExecutable
 {
     public static async Task<IResult> Handler(long id, AppDbContext db)
     {
-        var exe = await db.Executables.FindAsync(id);
+        var exe = await db.Executables
+            .Include(e => e.Versions)
+            .FirstOrDefaultAsync(e => e.Id == id);
 
         if (exe is null)
             return Results.NotFound();

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SSAReplacement.Api.Features.Schedules.Infrastructure;
 using SSAReplacement.Api.Infrastructure;
 
@@ -7,7 +8,9 @@ public static class DeleteSchedule
 {
     public static async Task<IResult> Handler(long id, AppDbContext db, IScheduleHangfireSyncService sync)
     {
-        var s = await db.Schedules.FindAsync(id);
+        var s = await db.Schedules
+            .Include(s => s.JobSchedules)
+            .FirstOrDefaultAsync(s => s.Id == id);
 
         if (s is null)
             return Results.NotFound();

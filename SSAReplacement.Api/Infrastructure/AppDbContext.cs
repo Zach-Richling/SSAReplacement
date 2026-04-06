@@ -49,6 +49,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             b.HasMany(j => j.JobSchedules).WithOne(js => js.Job).HasForeignKey(js => js.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(j => j.Runs).WithOne(jr => jr.Job).HasForeignKey(jr => jr.JobId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
             b.HasOne<User>().WithMany().HasForeignKey(j => j.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<User>().WithMany().HasForeignKey(j => j.DeletedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasQueryFilter(j => j.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<JobStep>(b =>
@@ -58,6 +60,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             b.HasOne(s => s.Executable).WithMany(e => e.JobSteps).HasForeignKey(s => s.ExecutableId);
             b.HasMany(s => s.Parameters).WithOne(p => p.JobStep).HasForeignKey(p => p.JobStepId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne<User>().WithMany().HasForeignKey(s => s.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<User>().WithMany().HasForeignKey(s => s.DeletedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasQueryFilter(s => s.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<JobStepParameter>(b =>
@@ -65,6 +69,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             b.HasKey(e => e.Id);
             b.HasOne(e => e.JobStep).WithMany(s => s.Parameters).HasForeignKey(e => e.JobStepId);
             b.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<User>().WithMany().HasForeignKey(e => e.DeletedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasQueryFilter(e => e.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<JobSchedule>(b =>
@@ -72,6 +78,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             b.HasKey(e => e.Id);
             b.HasOne(e => e.Schedule).WithMany(s => s.JobSchedules).HasForeignKey(e => e.ScheduleId);
             b.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<User>().WithMany().HasForeignKey(e => e.DeletedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasQueryFilter(e => e.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<JobRun>(b =>
@@ -81,6 +89,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             b.HasOne(e => e.Schedule).WithMany(s => s.JobRuns).HasForeignKey(e => e.ScheduleId);
             b.HasMany(e => e.RunSteps).WithOne(s => s.JobRun).HasForeignKey(s => s.JobRunId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<User>().WithMany().HasForeignKey(e => e.DeletedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasQueryFilter(e => e.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<JobRunStep>(b =>
@@ -89,18 +99,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             b.HasOne(s => s.JobRun).WithMany(r => r.RunSteps).HasForeignKey(s => s.JobRunId);
             b.HasOne(s => s.ExecutableVersion).WithMany(v => v.JobRunSteps).HasForeignKey(s => s.ExecutableVersionId);
             b.HasMany(s => s.Logs).WithOne(l => l.JobRunStep).HasForeignKey(l => l.JobRunStepId).OnDelete(DeleteBehavior.Cascade);
+            b.HasQueryFilter(s => s.ExecutableVersion.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<JobLog>(b =>
         {
             b.HasKey(jl => jl.Id);
             b.HasOne(e => e.JobRunStep).WithMany(s => s.Logs).HasForeignKey(e => e.JobRunStepId);
+            b.HasQueryFilter(e => e.JobRunStep.ExecutableVersion.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<Executable>(b =>
         {
             b.HasKey(e => e.Id);
             b.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<User>().WithMany().HasForeignKey(e => e.DeletedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasQueryFilter(e => e.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<ExecutableVersion>(b =>
@@ -108,18 +122,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             b.HasKey(ev => ev.Id);
             b.HasOne(ev => ev.Executable).WithMany(e => e.Versions).HasForeignKey(ev => ev.ExecutableId);
             b.HasOne<User>().WithMany().HasForeignKey(ev => ev.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<User>().WithMany().HasForeignKey(ev => ev.DeletedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasQueryFilter(ev => ev.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<ExecutableParameter>(b =>
         {
             b.HasKey(e => e.Id);
             b.HasOne(e => e.Version).WithMany(x => x.Parameters).HasForeignKey(e => e.ExecutableVersionId);
+            b.HasQueryFilter(e => e.Version.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<Schedule>(b =>
         {
             b.HasKey(s => s.Id);
             b.HasOne<User>().WithMany().HasForeignKey(s => s.CreatedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<User>().WithMany().HasForeignKey(s => s.DeletedByUserId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            b.HasQueryFilter(s => s.RecStatus != RecStatus.Deleted);
         });
 
         modelBuilder.Entity<RefreshToken>(b =>
@@ -149,6 +168,19 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        // Convert hard-deletes to soft-deletes for ISoftDeletable entities.
+        // Must run before audit snapshot so the snapshot sees Modified state.
+        var softDeletedEntities = new HashSet<object>();
+        foreach (var entry in ChangeTracker.Entries<ISoftDeletable>()
+                     .Where(e => e.State == EntityState.Deleted).ToList())
+        {
+            softDeletedEntities.Add(entry.Entity);
+            entry.State = EntityState.Modified;
+            entry.Entity.RecStatus = RecStatus.Deleted;
+            entry.Entity.DeletedByUserId = currentUserService.UserId;
+            entry.Entity.DeletedDate = DateTime.UtcNow;
+        }
+
         // Snapshot IAuditable entries and their states before save (IDs assigned after INSERT).
         // Capture OldValues/NewValues now while OriginalValues/CurrentValues are still intact.
         var auditableEntries = ChangeTracker.Entries()
@@ -192,13 +224,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             foreach (var (entry, state, _, oldValues, newValues) in auditableEntries)
             {
                 var entityId = (long)entry.Property("Id").CurrentValue!;
-                var action = state switch
-                {
-                    EntityState.Added => "Created",
-                    EntityState.Modified => "Updated",
-                    EntityState.Deleted => "Deleted",
-                    _ => "Unknown"
-                };
+                var action = softDeletedEntities.Contains(entry.Entity)
+                    ? "SoftDeleted"
+                    : state switch
+                    {
+                        EntityState.Added => "Created",
+                        EntityState.Modified => "Updated",
+                        EntityState.Deleted => "Deleted",
+                        _ => "Unknown"
+                    };
 
                 AuditEntries.Add(new AuditEntry
                 {
